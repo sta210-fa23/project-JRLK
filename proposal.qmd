@@ -1,6 +1,6 @@
 ---
 title: "Project Proposal"
-author: "Team name - Team member 1, Team member 2, Team member 3, Team member 4"
+author: "JRLK - Jess Ringness, Rebekah Kim, Laura Cai, Karen Dong"
 format: pdf
 execute: 
   warning: false
