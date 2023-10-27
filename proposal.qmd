@@ -15,8 +15,12 @@ library(tidymodels)
 # add other packages as needed
 
 # add code to load data
+job_postings <-read.csv("job_postings.csv")
 ```
 
+```{r}
+job_postings
+```
 ## Introduction
 
 ...
@@ -27,7 +31,92 @@ library(tidymodels)
 
 ## Initial exploratory data analysis
 
-...
+```{r}
+job_postings <- job_postings |> 
+  drop_na(views)
+```
+
+
+```{r}
+job_postings |>
+  ggplot(aes(x = views)) +
+  geom_histogram()
+```
+
+```{r}
+summary(job_postings$views)
+```
+
+```{r}
+two_thousand <- job_postings |>
+  filter(views > 2000)
+```
+
+
+
+```{r}
+two_thousand
+```
+
+```{r}
+job_postings |>
+  ggplot(aes(x = applies, y = views, color = pay_period)) +
+  geom_point() + 
+  facet_wrap(~pay_period)
+```
+```{r}
+job_postings |>
+  ggplot(aes(x = applies, y = views, color = pay_period)) +
+  geom_point() 
+```
+
+```{r}
+job_postings |>
+  ggplot(aes(x = applies, y = views, color = formatted_work_type)) +
+  geom_point() + 
+  facet_wrap(~formatted_work_type)
+```
+
+```{r}
+job_postings_exp_na <- job_postings |> 
+  drop_na(formatted_experience_level) |>
+  filter(formatted_experience_level != "")
+```
+
+
+```{r}
+job_postings_exp_na |>
+  ggplot(aes(x = applies, y = views, color = formatted_experience_level)) +
+  geom_point() + 
+  facet_wrap(~formatted_experience_level)
+```
+
+
+
+```{r}
+job_postings |>
+  ggplot(aes(x = max_salary, y = views)) +
+  geom_point()
+```
+```{r}
+job_postings |>
+  ggplot(aes(x = applies, y = views)) +
+  geom_point()
+```
+
+
+
+```{r}
+job_postings |>
+  ggplot(aes(x = max_salary, y = views, color = sponsored)) +
+  geom_point() + 
+  facet_wrap(~sponsored)
+```
+```{r}
+unique(job_postings$sponsored)
+```
+
+
 
 ## Analysis approach
 
