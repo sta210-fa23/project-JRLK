@@ -15,12 +15,49 @@ library(tidymodels)
 # add other packages as needed
 
 # add code to load data
-job_postings <-read.csv("job_postings.csv")
+job_postings <-read.csv("data/job_postings.csv")
+benefits <-read.csv("data/benefits.csv")
+
 ```
 
 ```{r}
 job_postings
 ```
+```{r}
+unique(benefits$type)
+```
+
+```{r}
+benefits |>
+  select(-inferred) |>
+  mutate(count = 1) |>
+  pivot_wider(names_from = "type", values_from = "count")
+```
+```{r}
+job_postings |>
+  inner_join(benefits, by = 'job_id')
+```
+
+```{r}
+left(job_postings, benefits, by = 'job_id')
+```
+
+
+```{r}
+length(unique(job_postings$job_id))
+```
+
+```{r}
+length(job_postings$job_id)
+```
+
+```{r}
+job_postings |>
+  filter(job_id == 3690843087)
+
+```
+
+
 ## Introduction
 
 ...
@@ -33,30 +70,26 @@ job_postings
 
 ```{r}
 job_postings <- job_postings |> 
-  drop_na(views)
+  drop_na(applies)
 ```
 
 
 ```{r}
 job_postings |>
-  ggplot(aes(x = views)) +
+  ggplot(aes(x = applies)) +
   geom_histogram()
 ```
 
 ```{r}
-summary(job_postings$views)
+summary(job_postings$applies)
 ```
 
 ```{r}
-two_thousand <- job_postings |>
-  filter(views > 2000)
+
 ```
 
 
 
-```{r}
-two_thousand
-```
 
 ```{r}
 job_postings |>
