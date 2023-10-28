@@ -14,6 +14,8 @@ editor: visual
 #| echo: false
 library(tidyverse)
 library(tidymodels)
+library(knitr)
+library(patchwork)
 job_postings <-read.csv("data/job_postings.csv")
 benefits <-read.csv("data/benefits.csv")
 employee <-read.csv("data/employee_counts.csv")
@@ -48,8 +50,10 @@ LinkedIn is a platform that connects companies, big and small, and professionals
 We are interested in exploring this topic because online job search services and platforms are now considered equally important for employees and employers accessing a wide variety of opportunities across the country compared to in-person job postings. However, this can mean that applicants are overwhelmed by the amount of options they have access to, and are less likely to come across or apply to individual postings. This problem creates a demand for services like Linkedin to monetize priority for some job postings over others, where it claims employers will “get 3x the amount of qualified applicants when [they] add a budget and promote [their] job post.”
 
 Our primary research question is - what factors about job postings increase popularity among applicants? Our hypothesis is that job postings associated with companies who are more established, invest more into hiring, and offer more benefits for employees will have greater popularity. These factors can be characterized by having followers and employees, monetizing the posting, allowing for flexibility in the job (measured by whether remote work is allowed or not), adding more benefits - such as higher salary, health benefits, etc., which will positively correlate with both the job’s view count and the number of applicants.
+
 ## Data description
 This data included in this set is sourced from linkedin.com, the website for LinkedIn. The creator of this data set, Arsh Koneru-Ansari, used Python to scrape data directly from linkedin.com and the scraper code is published in their GitHub (https://github.com/ArshKA/LinkedIn-Job-Scraper#jobs). The observations and general characteristics being measured through this data set are the number of applications for each job listing, the number of views for each job listing, the maximum salary rate, whether the job is remote or in-person, whether or not the listing is sponsored, the company’s follower count on LinkedIn, the number of employees in the company, and the benefits associated with each job.
+
 ## Initial exploratory data analysis
 ```{r drop_na_1}
 #| echo: false
@@ -59,6 +63,8 @@ linkedin <- linkedin |>
 
 ```{r plot_hist_applications}
 #| echo: false
+#| fig_width: 5 
+#| fig_height: 3
 linkedin |>
   ggplot(aes(x = applies)) +
   geom_histogram(binwidth = 20) +
@@ -72,75 +78,99 @@ linkedin |>
 summary(linkedin$applies)
 ```
 
-The distribution of the number of applications for a job listing on LinkedIn is right-skewed and uni-modal, with fewer applications for a job listing most prevalent. Given that the distribution is skewed, the center is 4.00 applications, as estimated by the median. The IQR describing the spread of the middle 50% of data is 12 applications (13 - 1). 
+The distribution of the number of applications for a job listing on LinkedIn is right-skewed and uni-modal, with fewer applications for a job listing most prevalent. Given that the distribution is skewed, the center is 4.00 applications, as estimated by the median. The IQR describing the spread of the middle 50% of data is 12 applications (13 - 1). There are 2 major outliers with a number of applications greater than 1,000. One popular position is the Junior Software Engineer job listing at Brooksource, with 1615 total listings. Another job listing is for Customer Success Manager at Noom with 1420 applications. 
 
-There are 2 major outliers with a number of applications greater than 1,000. One popular position is the Junior Software Engineer job listing at Brooksource, with 1615 total listings. Another job listing is for Customer Success Manager at Noom with 1420 applications. 
-
+```{r views_dist_relationship}
+#| echo: false
+#| fig_width: 5 
+#| fig_height: 3
+views <- linkedin |>
+  ggplot(aes(x = views)) +
+  geom_histogram() +
+  labs(x = "Number of Views",
+       y = "Count of Job Listings",
+       title = "Distribution of the Number of Views of a Job Listing") 
+views
+```
 ```{r}
 #| echo: false
-job_postings |>
-  ggplot(aes(x = applies, y = views, color = pay_period)) +
-  geom_point() + 
-  facet_wrap(~pay_period)
+summary(linkedin$views)
 ```
 
-```{r}
+The distribution of the number of views for a job listing on LinkedIn is right-skewed and uni-modal, with fewer views for a job listing most prevalent. Given that the distribution is skewed, the center is 45 views, as estimated by the median. The IQR describing the spread of the middle 50% of data is 62 views (107-45). There are 9 major outliers with more than 2000 views, from positions at Noon, Brooksource, Clerisy, Position Purpose, ClearSky Health, Harbor Freight Tools, BrainWorks, RMS, and Webflow. 
+
+```{r views_apps_relationship}
 #| echo: false
-job_postings |>
-  ggplot(aes(x = applies, y = views, color = pay_period)) +
-  geom_point() 
+#| fig_width: 5 
+#| fig_height: 3
+views_apps <- linkedin |>
+  ggplot(aes(x = applies, y = views)) +
+  geom_point() +
+  geom_smooth(method = 'lm',formula = y ~ x, se = F) +
+  labs(x = "Number of Views",
+       y = "Number of Applications",
+       title = "Number of Applications by Number of Views") 
+views_apps
 ```
+The relaitonship between the number of views and the number of applications is positive and linear, meaning as the number of views increases, so does the number of applications for a job listing on LinkedIn, on average. The bulk of the data is clustered in the range of 1-250 views and 1-1000 applications, with some exceptions. There are a couple of job listings with a high number of applications with an average number of views and a few job listings with a high number of views and applications far above the majority of the data.
+
+```{r work_type_dist}
+#| echo: false
+#| fig_width: 5 
+#| fig_height: 2
+worktype <- linkedin |> 
+  ggplot(aes(x = as.factor(formatted_work_type))) + 
+  geom_bar() + 
+  labs(x = "Work Format Type",
+       y = "Number of Positions",
+       title = "Distribution of the Work Type Format")
+worktype
+```
+
+The levels of `formatted_work_type` include contract, full-time, internship, other, part-time, temporary, and volunteer. This histogram describing the distribution of work format type illustrates that a majority of the positions listed are full-time position, with over 7000 positions. Contract is the second most common work format type with slightly over 1500 positions. The other positions, including internship, other, part-time, temporary, and volunteer, have very few positions relative to full-time positions.
+
+```{r work_type_relationship}
+#| echo: false
+#| fig_width: 5 
+#| fig_height: 2
+worktype_apps <- linkedin |>
+  ggplot(aes(x = views, y = applies, color = formatted_work_type)) +
+  geom_point() +
+  labs(color = "Type of Work",
+       x = "Number of Views",
+       y = "Number of Applications",
+       title = "Number of Applications by Views and Type of Work")
+worktype_apps
+```
+
+
+
 
 ```{r}
 #| echo: false
-job_postings |>
-  ggplot(aes(x = applies, y = views, color = formatted_work_type)) +
-  geom_point() + 
-  facet_wrap(~formatted_work_type)
-```
-
-```{r}
-#| echo: false
-job_postings_exp_na <- job_postings |> 
+linkedin2 <- linkedin |> 
   drop_na(formatted_experience_level) |>
   filter(formatted_experience_level != "")
 ```
 
 ```{r}
 #| echo: false
-job_postings_exp_na |>
-  ggplot(aes(x = applies, y = views, color = formatted_experience_level)) +
+#| fig_width: 5 
+#| fig_height: 2
+linkedin2 |>
+  ggplot(aes(x = views, y = applies, color = formatted_experience_level)) +
   geom_point() + 
-  facet_wrap(~formatted_experience_level)
+  facet_wrap(~formatted_experience_level) + 
+  geom_smooth(method = 'lm',formula = y ~ x, se = F) +
+  labs(x = "Number of Views",
+       y = "Number of Applications",
+       color = "Experience Level",
+       title = "Number of Applications Based on the 
+       Experience Level Required and Views")
 ```
 
-```{r}
-#| echo: false
-job_postings |>
-  ggplot(aes(x = max_salary, y = views)) +
-  geom_point()
-```
-
-```{r}
-#| echo: false
-job_postings |>
-  ggplot(aes(x = applies, y = views)) +
-  geom_point()
-```
-
-```{r}
-#| echo: false
-job_postings |>
-  ggplot(aes(x = max_salary, y = views, color = sponsored)) +
-  geom_point() + 
-  facet_wrap(~sponsored)
-```
-
-```{r}
-#| echo: false
-unique(job_postings$sponsored)
-```
 ## Analysis approach
 A linear regression model is fitting for this prediction, as the number of applications for a listing is a numerical variable. The number of views the post received, the maximum salary of the position, the number of benefits provided by the job, the number of followers the company has, the number of employees the company had at the time of listing, if remote working is permitted, and the location of the job as metropolitan or rural could be used as potential useful predictors of the amount of applications for a job on a LinkedIn job listing. These variables include views, employee_count, remote_allowed, follower_count,  max_salary multiplied by the period in pay_period to find annual pay, benefits manipulated to be a categorical variable, and location manipulated to be a categorical variable. 
+
 ## Data dictionary
 The data dictionary can be found [here](ADD%20LINK!!!) \[Update the link and remove this note!\]
