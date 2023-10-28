@@ -12,51 +12,28 @@ editor: visual
 #| label: load-pkg-data
 library(tidyverse)
 library(tidymodels)
-# add other packages as needed
-
-# add code to load data
 job_postings <-read.csv("data/job_postings.csv")
 benefits <-read.csv("data/benefits.csv")
-
+employee <-read.csv("data/employee_counts.csv")
 ```
 
-```{r}
-job_postings
-```
-```{r}
-unique(benefits$type)
-```
-
-```{r}
-benefits |>
+```{r manipulating_benefits}
+benefits <- benefits |>
   select(-inferred) |>
   mutate(count = 1) |>
   pivot_wider(names_from = "type", values_from = "count")
 ```
-```{r}
-job_postings |>
-  inner_join(benefits, by = 'job_id')
+
+
+```{r joining_jobs_employee}
+jobs_employee <- job_postings |>
+  left_join(employee, by = join_by("company_id"))
 ```
 
-```{r}
-left(job_postings, benefits, by = 'job_id')
+```{r joining_final_set}
+linkedin <- jobs_employee |>
+  left_join(benefits, by = join_by("job_id"))
 ```
-
-
-```{r}
-length(unique(job_postings$job_id))
-```
-
-```{r}
-length(job_postings$job_id)
-```
-
-```{r}
-job_postings |>
-  filter(job_id == 3690843087)
-
-```
-
 
 ## Introduction
 
@@ -68,28 +45,27 @@ job_postings |>
 
 ## Initial exploratory data analysis
 
-```{r}
-job_postings <- job_postings |> 
+```{r drop_na_1}
+linkedin <- linkedin |> 
   drop_na(applies)
 ```
 
-
-```{r}
-job_postings |>
+```{r plot_hist_applications}
+linkedin |>
   ggplot(aes(x = applies)) +
-  geom_histogram()
+  geom_histogram(binwidth = 20) +
+  labs(x = "Number of Applications Recieved",
+       y = "Count of Job Listings",
+       title = "Distribution of the Number of Applications Recieved") 
 ```
 
 ```{r}
-summary(job_postings$applies)
+summary(linkedin$applies)
 ```
 
-```{r}
+The distribution of the number of applications for a job listing on LinkedIn is right-skewed and uni-modal, with fewer applications for a job listing most prevalent. Given that the distribution is skewed, the center is 4.00 applications, as estimated by the median. The IQR describing the spread of the middle 50% of data is 12 applications (13 - 1). 
 
-```
-
-
-
+There are a couple of outliers with a high number of applications. 
 
 ```{r}
 job_postings |>
@@ -97,6 +73,7 @@ job_postings |>
   geom_point() + 
   facet_wrap(~pay_period)
 ```
+
 ```{r}
 job_postings |>
   ggplot(aes(x = applies, y = views, color = pay_period)) +
@@ -116,7 +93,6 @@ job_postings_exp_na <- job_postings |>
   filter(formatted_experience_level != "")
 ```
 
-
 ```{r}
 job_postings_exp_na |>
   ggplot(aes(x = applies, y = views, color = formatted_experience_level)) +
@@ -124,20 +100,17 @@ job_postings_exp_na |>
   facet_wrap(~formatted_experience_level)
 ```
 
-
-
 ```{r}
 job_postings |>
   ggplot(aes(x = max_salary, y = views)) +
   geom_point()
 ```
+
 ```{r}
 job_postings |>
   ggplot(aes(x = applies, y = views)) +
   geom_point()
 ```
-
-
 
 ```{r}
 job_postings |>
@@ -145,11 +118,10 @@ job_postings |>
   geom_point() + 
   facet_wrap(~sponsored)
 ```
+
 ```{r}
 unique(job_postings$sponsored)
 ```
-
-
 
 ## Analysis approach
 
