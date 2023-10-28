@@ -33,6 +33,8 @@ jobs_employee <- job_postings |>
 ```{r joining_final_set}
 linkedin <- jobs_employee |>
   left_join(benefits, by = join_by("job_id"))
+
+linkedin <- linkedin |> distinct(job_id, .keep_all = TRUE)
 ```
 
 ## Introduction
@@ -65,7 +67,7 @@ summary(linkedin$applies)
 
 The distribution of the number of applications for a job listing on LinkedIn is right-skewed and uni-modal, with fewer applications for a job listing most prevalent. Given that the distribution is skewed, the center is 4.00 applications, as estimated by the median. The IQR describing the spread of the middle 50% of data is 12 applications (13 - 1). 
 
-There are a couple of outliers with a high number of applications. 
+There are 2 major outliers with a number of applications greater than 1,000. One popular position is the Junior Software Engineer job listing at Brooksource, with 1615 total listings. Another job listing is for Customer Success Manager at Noom with 1420 applications. 
 
 ```{r}
 job_postings |>
