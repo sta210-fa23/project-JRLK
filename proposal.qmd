@@ -195,7 +195,7 @@ experience_apps <- linkedin2 |>
 experience_apps
 ```
 
-Another potential interaction effect is the number of views and experience level. Different positions are more saught after on LinkedIn particularly, depending on the characteristics of LinkedIn viewers. The number of applications increases per number of views for a position requiring associate experience increases at a more rapid rate than those for other positions, although all positions have some sort of impact associated with views and applications.
+Another potential interaction effect is the number of views and experience level. Different positions are more sought after on LinkedIn over others, depending on viewers' backgrounds. The number of applications increases per number of views for a position requiring associate experience increases at a more rapid rate than those for other positions, although all positions have some sort of impact associated with views and applications.
 
 ## Analysis approach
 
