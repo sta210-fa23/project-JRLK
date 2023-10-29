@@ -6,7 +6,7 @@ Then, include metadata about your dataset including information on provenance, c
 
 The codebook for your data file(s) using the following format.
 
-## Name of data file
+## job_postings.csv
 
 | Variable                   | Description                                                                                       |
 |:---------------------------|:--------------------------------------------------------------------------------------------------|
@@ -37,5 +37,18 @@ The codebook for your data file(s) using the following format.
 | work_type                  | type of work associated with the job, full time or contract (categorical)                         |
 | currency                   | if the currency in which the salary is provided is in the US or not (categorical)                 |
 | remote_allowed             | whether job permits remote work (categorical)                                                     |
-| employee_count             | number of employees at company (numerical)                                                        |
-| follower_count             | number of company followers on LinkedIn (numerical))                                              |
+
+## benefits.csv
+
+| Variable | Description                                                                   |
+|:---------|:------------------------------------------------------------------------------|
+| job_id   | unique job ID as defined by LinkedIn identifying the particular offering (ID) |
+| type     | type of benefit provided (401K, Medical Insurance, etc) (categorical)         |
+
+## employee_counts.csv
+
+| Variable       | Description                                                                                       |
+|:---------------|:--------------------------------------------------------------------------------------------------|
+| company_id     | unique company ID as defined by LinkedIn identifying the particular company offering the job (ID) |
+| employee_count | number of employees at company (numerical)                                                        |
+| follower_count | number of company followers on LinkedIn (numerical))                                              |
