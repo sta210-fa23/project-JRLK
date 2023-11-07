@@ -20,3 +20,133 @@ Your written report goes here!
 ::: callout-important
 Before you submit, make sure your code chunks are turned off with `echo: false` and there are no warnings or messages with `warning: false` and `message: false` in the YAML.
 :::
+
+￼
+
+
+```{r}
+#| label: load packages and data
+library(tidyverse)
+library(tidymodels)
+library(knitr)
+library(patchwork)
+job_postings <-read.csv("data/job_postings.csv")
+benefits <-read.csv("data/benefits.csv")
+employee <-read.csv("data/employee_counts.csv")
+```
+
+Your written report goes here!
+
+::: callout-important
+Before you submit, make sure your code chunks are turned off with `echo: false` and there are no warnings or messages with `warning: false` and `message: false` in the YAML.
+:::
+
+
+```{r manipulating_benefits}
+#| echo: false
+benefits <- benefits |>
+  select(-inferred) |>
+  mutate(count = 1) |>
+  pivot_wider(names_from = "type", values_from = "count")
+```
+
+
+```{r joining_jobs_employee}
+#| echo: false
+jobs_employee <- job_postings |>
+  left_join(employee, by = join_by("company_id"))
+```
+
+```{r joining_final_set}
+#| echo: false
+linkedin <- jobs_employee |>
+  left_join(benefits, by = join_by("job_id"))
+
+linkedin <- linkedin |> distinct(job_id, .keep_all = TRUE)
+```
+
+
+```{r}
+linkedin <- linkedin |>
+  mutate(per_applies = applies/views) |>
+  filter(per_applies < 1)
+```
+
+```{r mutate_pay_nums}
+#| warning: false
+#| echo: false
+linkedin <- linkedin |>
+  mutate(pay_period = recode(pay_period, YEARLY = 1, HOURLY = 2080))
+```
+
+```{r annual_salary_manipulation}
+#| echo: false
+linkedin <- linkedin |>
+   mutate(annual_max_salary = pay_period * max_salary/1000)
+```
+
+```{r}
+linkedin |>
+  filter(annual_max_salary > 500)
+```
+
+
+```{r}
+names(linkedin)
+```
+```{r}
+linkedin
+```
+
+
+```{r}
+linkedin |>
+  ggplot(aes(x = annual_max_salary, y = per_applies)) +
+  geom_point()
+```
+
+```{r}
+linkedin |>
+  ggplot(aes(x = per_applies)) + 
+  geom_histogram()
+```
+
+
+
+```{r}
+linkedin
+```
+
+
+```{r}
+set.seed(210)
+
+linkedin_split <- initial_split(linkedin)
+linkedin_train <- training(linkedin_split)
+linkedin_test  <- testing(linkedin_split)
+```
+
+
+
+
+```{r}
+linkedin_fit <- linear_reg() |>
+  set_engine("lm") |>
+#  fit(per_applies ~ med_salary + formatted_work_type + formatted_experience_level, data = linkedin_train)
+  fit(per_applies ~ med_salary, data = linkedin_train)
+
+
+tidy(linkedin_fit) |> 
+  kable(digits = 2)
+
+```
+
+```{r}
+glance(linkedin_fit)
+```
+
+
+
+
+
+
