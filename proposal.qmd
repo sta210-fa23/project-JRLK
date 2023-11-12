@@ -9,6 +9,13 @@ editor: visual
 ---
 
 ```{r}
+calc_model_stats <- function(x) {
+  glance(extract_fit_parsnip(x)) |>
+    select(adj.r.squared, AIC, BIC)
+}
+```
+
+```{r}
 #| label: load-pkg-data
 #| message: false
 #| echo: false
@@ -77,6 +84,7 @@ linkedin <- linkedin |>
                                 student_loan_assistance,
                                 child_care_support))))
 ```
+
 ```{r drop_columns}
 linkedin <- subset(linkedin, select = -c(medical_insurance, 
                                 dental_insurance, 
@@ -90,6 +98,11 @@ linkedin <- subset(linkedin, select = -c(medical_insurance,
                                 commuter_benefits,
                                 student_loan_assistance,
                                 child_care_support))
+```
+
+```{r}
+linkedin$if_benefits <- factor(ifelse(linkedin$all_benefits > 0, "listed", "none"),
+  levels = c("none", "listed"))
 ```
 
 ## Introduction
@@ -124,13 +137,28 @@ linkedin <- linkedin |>
 
 linkedin <- linkedin |>
   drop_na(follower_count) 
+
+linkedin <- linkedin |>
+  drop_na(work_type)
+
+linkedin <- linkedin |> 
+  drop_na(compensation_type)
+```
+
+```{r}
+linkedin <- linkedin |>
+  mutate(app_to_views = applies / views)
+```
+
+```{r}
+linkedin <- subset(linkedin, app_to_views < 1)
 ```
 
 ```{r mutate_pay_nums}
 #| warning: false
 #| echo: false
 linkedin <- linkedin |>
-  mutate(pay_period = recode(pay_period, YEARLY = 1, HOURLY = 2080))
+  mutate(pay_period = recode(pay_period, YEARLY = 1, HOURLY = 2080, MONTHLY = 12))
 ```
 
 ```{r annual_salary_manipulation}
@@ -252,3 +280,7 @@ A linear regression model is fitting for this prediction, as the number of appli
 ## Data dictionary
 
 The data dictionary can be found [here](https://docs.google.com/document/d/15LOwqM0wwdBLOcGvvohmnEjVNeWslftThWEikwoEWNo/edit?usp=sharing).
+
+
+
+
