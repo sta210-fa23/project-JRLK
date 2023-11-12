@@ -1,54 +1,111 @@
 ---
-title: "Your project title"
-author: "Team Name: Team member 1, Team member 2, Team member 3, Team member 4"
-date: "Update date"
+title: "Project Proposal"
+author: "JRLK - Jess Ringness, Rebekah Kim, Laura Cai, Karen Dong"
 format: pdf
 execute: 
   warning: false
   message: false
-  echo: false
 editor: visual
 ---
 
 ```{r}
-#| label: load packages and data
-
-```
-
-Your written report goes here!
-
-::: callout-important
-Before you submit, make sure your code chunks are turned off with `echo: false` and there are no warnings or messages with `warning: false` and `message: false` in the YAML.
-:::
-
-￼
-
-
-```{r}
-#| label: load packages and data
+#| label: load-pkg-data
+#| message: false
+#| echo: false
 library(tidyverse)
 library(tidymodels)
 library(knitr)
 library(patchwork)
+library(janitor)
 job_postings <-read.csv("data/job_postings.csv")
 benefits <-read.csv("data/benefits.csv")
 employee <-read.csv("data/employee_counts.csv")
 ```
-
-Your written report goes here!
-
-::: callout-important
-Before you submit, make sure your code chunks are turned off with `echo: false` and there are no warnings or messages with `warning: false` and `message: false` in the YAML.
-:::
-
 
 ```{r manipulating_benefits}
 #| echo: false
 benefits <- benefits |>
   select(-inferred) |>
   mutate(count = 1) |>
-  pivot_wider(names_from = "type", values_from = "count")
+  pivot_wider(names_from = "type", values_from = "count") |>
+  clean_names()
 ```
+
+```{r joining_jobs_employee}
+#| echo: false
+jobs_employee <- job_postings |>
+  left_join(employee, by = join_by("company_id"))
+```
+
+```{r joining_final_set}
+#| echo: false
+linkedin <- jobs_employee |>
+  left_join(benefits, by = join_by("job_id"))
+
+linkedin <- linkedin |> distinct(job_id, .keep_all = TRUE)
+```
+
+```{r make_zeros}
+#| echo: false
+linkedin["medical_insurance"][is.na(linkedin["medical_insurance"])] <- 0
+linkedin["dental_insurance"][is.na(linkedin["dental_insurance"])] <- 0
+linkedin["x401_k"][is.na(linkedin["x401_k"])] <- 0
+linkedin["paid_maternity_leave"][is.na(linkedin["paid_maternity_leave"])] <- 0
+linkedin["disability_insurance"][is.na(linkedin["disability_insurance"])] <- 0
+linkedin["vision_insurance"][is.na(linkedin["vision_insurance"])] <- 0
+linkedin["tuition_assistance"][is.na(linkedin["tuition_assistance"])] <- 0
+linkedin["pension_plan"][is.na(linkedin["pension_plan"])] <- 0
+linkedin["paid_paternity_leave"][is.na(linkedin["paid_paternity_leave"])] <- 0
+linkedin["commuter_benefits"][is.na(linkedin["commuter_benefits"])] <- 0
+linkedin["student_loan_assistance"][is.na(linkedin["student_loan_assistance"])] <- 0
+linkedin["child_care_support"][is.na(linkedin["child_care_support"])] <- 0
+```
+
+```{r total_benefits}
+#| echo: false
+linkedin <- linkedin |>
+  mutate(all_benefits = rowSums(across(c(medical_insurance, 
+                                dental_insurance, 
+                                x401_k, 
+                                paid_maternity_leave,
+                                disability_insurance,
+                                vision_insurance,
+                                tuition_assistance,
+                                pension_plan,
+                                paid_paternity_leave,
+                                commuter_benefits,
+                                student_loan_assistance,
+                                child_care_support))))
+```
+```{r drop_columns}
+linkedin <- subset(linkedin, select = -c(medical_insurance, 
+                                dental_insurance, 
+                                x401_k, 
+                                paid_maternity_leave,
+                                disability_insurance,
+                                vision_insurance,
+                                tuition_assistance,
+                                pension_plan,
+                                paid_paternity_leave,
+                                commuter_benefits,
+                                student_loan_assistance,
+                                child_care_support))
+```
+
+
+## Introduction
+
+LinkedIn is a platform that connects companies, big and small, and professionals spanning various levels of experience. As a result of its growing popularity, there are thousands of active job postings available on LinkedIn, with more consistently added. Numerous variables may impact the popularity of a job posting -- an employer's goal is likely to attract more outreach on their job posting to attract more applicants, which could potentially lead to more qualified candidates to apply for their company's roles.
+
+We are interested in exploring this topic because online job search services and platforms are now considered equally important for employees and employers accessing a wide variety of opportunities across the country compared to in-person job postings. However, this can mean that applicants are overwhelmed by the amount of options they have access to, and are less likely to come across or apply to individual postings. This problem creates a demand for services like Linkedin to monetize priority for some job postings over others, where it claims employers will "get 3x the amount of qualified applicants when \[they\] add a budget and promote \[their\] job post."
+
+Our primary research question is - what factors about job postings increase popularity among applicants? Our hypothesis is that job postings associated with companies who are more established, invest more into hiring, and offer more benefits for employees will have greater popularity. These factors can be characterized by having followers and employees, monetizing the posting, allowing for flexibility in the job (measured by whether remote work is allowed or not), adding more benefits - such as higher salary, health benefits, etc., which will positively correlate with both the job's view count and the number of applicants.
+
+## Data description
+
+This data included in this set is sourced from linkedin.com, the website for LinkedIn. The creator of this data set, Arsh Koneru-Ansari, used Python to scrape data directly from linkedin.com and the scraper code is published in their GitHub (https://github.com/ArshKA/LinkedIn-Job-Scraper#jobs). The observations and general characteristics being measured through this data set are the number of applications for each job listing, the number of views for each job listing, the maximum salary rate, whether the job is remote or in-person, whether or not the listing is sponsored, the company's follower count on LinkedIn, the number of employees in the company, and the benefits associated with each job.
+
+## Initial exploratory data analysis
 
 ```{r}
 
@@ -56,8 +113,6 @@ benefits <- replace(benefits, is.na(benefits), 0)
 benefits$tot_benefits <- rowSums(benefits == 1)
 benefits_total <- benefits[, c('job_id', 'tot_benefits')]
 ```
-
-
 
 ```{r joining_jobs_employee}
 #| echo: false
@@ -69,13 +124,16 @@ jobs_employee <- job_postings |>
 #| echo: false
 linkedin <- jobs_employee |>
   left_join(benefits_total, by = join_by("job_id"))
+```
 
+```{r}
 linkedin_yearly <- linkedin |> 
   distinct(job_id, .keep_all = TRUE) |>
   mutate(per_applies = applies/views) |>
   filter(per_applies < 1) |>
   filter(pay_period == "YEARLY") |>
-  mutate(original_listed_time = as.POSIXct(original_listed_time/1000, origin = "1970-01-01", tz = "EST")) 
+  mutate(original_listed_time = as.POSIXct(original_listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
+  mutate(listed_time = as.POSIXct(listed_time/1000, origin = "1970-01-01", tz = "EST")) 
 
 linkedin_yearly$hour <- sapply(strsplit(as.character(linkedin_yearly$original_listed_time), ' '), function(x) {
   time_parts <- unlist(strsplit(x[2], ':'))
@@ -84,80 +142,44 @@ linkedin_yearly$hour <- sapply(strsplit(as.character(linkedin_yearly$original_li
 ```
 
 ```{r}
-linkedin_yearly
+linkedin_yearly |>
+  ggplot(aes(x = max_salary, y = per_applies, color = formatted_experience_level)) +
+  geom_point() +
+  facet_wrap(~formatted_experience_level)
 ```
 
 ```{r}
 linkedin_yearly |>
-  ggplot(aes(x = hour, y = per_applies)) + 
+  ggplot(aes(x = follower_count, y = per_applies)) +
+  geom_point()
+```
+```{r}
+linkedin_yearly |>
+  ggplot(aes(x = tot_benefits, y = per_applies)) +
   geom_point()
 ```
 
 
 
 ```{r}
-# Sample data frame
-data <- data.frame(timestamp = c('2023-11-12 08:30:45', '2023-11-12 15:45:20', '2023-11-12 22:10:05'))
-
-# Splitting timestamp and extracting the hour
-data$hour <- sapply(strsplit(as.character(data$timestamp), ' '), function(x) {
-  time_parts <- unlist(strsplit(x[2], ':'))
-  return(time_parts[1])
-})
-
-# Display the resulting data frame
-print(data)
-
-```
-
-
-```{r}
-linkedin_yearly
+group <- linkedin_yearly |>
+  group_by(hour) |>
+  summarize(mean_per_applies = mean(per_applies))
 ```
 
 ```{r}
-#1692732000000
-timestamp <- 1692732000
-
-#timestamp <- 1692817626
-formatted_date <- as.POSIXct(timestamp, origin = "1970-01-01", tz = "UTC")
-print(formatted_date)
-
+group
 ```
 
+idk if looking at hours is meaningful at all esp because they aren't all posting in est
 
 
 ```{r}
-linkedin_yearly |>
-  filter(employee_count < 1000) |>
-  ggplot(aes(x = employee_count, y = per_applies)) + 
-  geom_point()
+group |>
+  ggplot(aes(x = hour, y = mean_per_applies)) +
+  geom_col()
 ```
-
-
 ```{r}
-linkedin_hourly <- linkedin |> 
-  distinct(job_id, .keep_all = TRUE) |>
-  mutate(per_applies = applies/views) |>
-  filter(per_applies < 1) |>
-  filter(pay_period == "YEARLY")
-```
-
-
-```{r}
-set.seed(210)
-linkedin_split <- initial_split(linkedin_yearly, prop = 0.8)
-linkedin_train <- training(linkedin_split)
-linkedin_test <- testing(linkedin_split)
-```
-
-```{r}
-linkedin_train
-```
-
-
-```{r}
-
 linkedin_yr_rec <- recipe(per_applies ~ job_id + max_salary + follower_count + formatted_experience_level, data = linkedin_train) |> 
   update_role(job_id, new_role = "ID") |> 
   step_mutate(max_salary = max_salary / 1000000) |>
@@ -166,38 +188,6 @@ linkedin_yr_rec <- recipe(per_applies ~ job_id + max_salary + follower_count + f
   step_dummy(all_nominal_predictors()) |> 
   step_zv(all_predictors())
 ```
-
-```{r}
-linkedin_yr_rec1 <- recipe(per_applies ~ job_id + max_salary + follower_count, data = linkedin_train) |> 
-  update_role(job_id, new_role = "ID") |> 
-  step_mutate(max_salary = max_salary / 1000000) |>
-  step_mutate(follower_count = follower_count / 100000000) |>
-  step_naomit(all_predictors()) |>
-  step_dummy(all_nominal_predictors()) |> 
-  step_zv(all_predictors())
-```
-
-```{r}
-
-linkedin_yr_rec_ben <- recipe(per_applies ~ job_id + max_salary + tot_benefits, data = linkedin_train) |> 
-  update_role(job_id, new_role = "ID") |> 
-  step_mutate(max_salary = max_salary / 1000000) |>
-  #step_mutate(follower_count = follower_count / 100000000) |>
-  step_naomit(all_predictors()) |>
-  step_dummy(all_nominal_predictors()) |> 
-  step_zv(all_predictors())
-```
-
-```{r}
-linkedin_yr_rec_hr <- recipe(per_applies ~ job_id + max_salary + hour, data = linkedin_train) |> 
-  update_role(job_id, new_role = "ID") |> 
-  step_mutate(max_salary = max_salary / 1000000) |>
-  step_naomit(all_predictors()) |>
-  step_dummy(all_nominal_predictors()) |> 
-  step_zv(all_predictors())
-```
-
-
 
 
 ```{r}
@@ -219,148 +209,158 @@ tidy(linkedin_yr_fit) |>
 ```
 
 ```{r}
-#specify the model
-linkedin_yr_spec1 <- linear_reg() |>
-  set_engine("lm")
-
-#build model workflow
-linkedin_yr_workflow1 <- workflow() |>
-  add_model(linkedin_yr_spec1) |>
-  add_recipe(linkedin_yr_rec1) 
-
-# fit the model 
-linkedin_yr_fit1 <- linkedin_yr_workflow1 |>
-  fit(data = linkedin_train) 
-
-tidy(linkedin_yr_fit1) |>
-  kable(digits = 3)
-```
-
-```{r}
-#specify the model
-linkedin_yr_spec_ben <- linear_reg() |>
-  set_engine("lm")
-
-#build model workflow
-linkedin_yr_workflow_ben <- workflow() |>
-  add_model(linkedin_yr_spec_ben) |>
-  add_recipe(linkedin_yr_rec_ben) 
-
-# fit the model 
-linkedin_yr_fit_ben <- linkedin_yr_workflow_ben |>
-  fit(data = linkedin_train) 
-
-tidy(linkedin_yr_fit_ben) |>
-  kable(digits = 3)
-```
-```{r}
-#specify the model
-linkedin_yr_spec_hr <- linear_reg() |>
-  set_engine("lm")
-
-#build model workflow
-linkedin_yr_workflow_hr <- workflow() |>
-  add_model(linkedin_yr_spec_hr) |>
-  add_recipe(linkedin_yr_rec_hr) 
-
-# fit the model 
-linkedin_yr_fit_hr <- linkedin_yr_workflow_hr |>
-  fit(data = linkedin_train) 
-
-tidy(linkedin_yr_fit_hr) |>
-  kable(digits = 3)
-```
-
-
-BIC-- -2771, -2757, -1315
-```{r}
-glance(linkedin_yr_fit1)
-```
-
-```{r}
 glance(linkedin_yr_fit)
 ```
+
+
+
+
+
+
+
+The `linkedin` dataset must drop_na values for relevent variables, and the `pay_period` dataset must be recoded such that it is a numerical variable of the number of pay periods in a year. The `annual_max_salary` can then be calculated by multiplying the number of periods by the maximum pay. The `benefits` data was also manipulated so that each is a dummy variable. In the final analysis, more manipulations will be done as needed.
+
+```{r drop_na}
+#| echo: false
+linkedin <- linkedin |> 
+  drop_na(applies)
+
+linkedin <- linkedin |> 
+  drop_na(pay_period) 
+  
+linkedin <- linkedin |>
+  drop_na(max_salary) 
+
+linkedin <- linkedin |>
+  drop_na(views) 
+
+linkedin <- linkedin |>
+  drop_na(follower_count) 
+```
+
+```{r mutate_pay_nums}
+#| warning: false
+#| echo: false
+linkedin <- linkedin |>
+  mutate(pay_period = recode(pay_period, YEARLY = 1, HOURLY = 2080))
+```
+
+```{r annual_salary_manipulation}
+#| echo: false
+linkedin <- linkedin |>
+   mutate(annual_max_salary = pay_period * max_salary/1000)
+```
+
+```{r plot_hist_applications}
+#| echo: false
+#| fig_width: 5 
+#| fig_height: 1.5
+views_dist <- linkedin |>
+  ggplot(aes(x = views)) +
+  geom_histogram() +
+  labs(x = "Number of Views",
+       y = "Count of Job Listings",
+       title = " Fig. 1 Distribution of the 
+       Number of Views 
+       of a Job Listing") 
+app_dist <- linkedin |>
+  ggplot(aes(x = applies)) +
+  geom_histogram() +
+  labs(x = "Number of Applications Recieved",
+       y = "Count of Job Listings",
+       title = "Fig 2. Distribution of the 
+       Number of Applications 
+       Recieved") 
+views_dist + app_dist
+```
+
+```{r applies_summary}
+#| echo: false
+summary(linkedin$applies)
+```
+
+Fig 1. The distribution of the number of applications for a job listing on LinkedIn is right-skewed and uni-modal, with fewer applications for a job listing most prevalent. Given that the distribution is skewed, the center is 8 applications, as estimated by the median. The IQR describing the spread of the middle 50% of data is 23 applications (26 - 3). There are 2 major outliers. One popular position is the job listing for Customer Success Manager at Noom with 1420 applications, another is the Customer Service Representative at Position Purpose with 980 applications.
+
+```{r views_summary}
+summary(linkedin$views)
+```
+
+Fig 2. The distribution of the number of views for a job listing on LinkedIn is right-skewed and uni-modal, with fewer views for a job listing most prevalent. Given that the distribution is skewed, the center is 54 views, as estimated by the median. The IQR describing the spread of the middle 50% of data is 103 views (126-23). There is one major outlier with more than 5000 views: the job listing for Customer Success Manager at Noom.
+
+```{r views_dist_relationship}
+#| echo: false
+#| fig_width: 5 
+#| fig_height: 1
+views_apps <- linkedin |>
+  ggplot(aes(x = applies, y = views)) +
+  geom_point() +
+  geom_smooth(method = 'lm',formula = y ~ x, se = F) +
+  labs(x = "Number of Views",
+       y = "Number of Applications",
+       title = "Fig. 3 Number of Applications
+       by Number of Views") 
+worktype <- linkedin |> 
+  ggplot(aes(x = as.factor(formatted_work_type))) + 
+  geom_bar() + 
+  labs(x = "Work Format Type",
+       y = "Number of Positions",
+       title = "Fig 4. Distribution of the 
+      Work Type Format") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+views_apps + worktype 
+```
+
+Fig 3. We suspected that the number of applications is heavily influenced by the number of views the application gets. The relationship between the number of views and the number of applications is positive and linear, meaning as the number of views increases, so does the number of applications for a job listing on LinkedIn, on average. The bulk of the data is clustered in the range of 1-250 views and 1-1000 applications, with some exceptions. There are a handful of listings with number of views and applications far above the majority of the data, especially the listings at Noom and Position Purpose.
+
+Fig 4. The levels of `formatted_work_type` include contract, full-time, internship, other, part-time, temporary, and volunteer. This histogram describing the distribution of work format type illustrates that a majority of the positions listed are full-time position, with over 7000 positions. Contract is the second most common work format type with slightly over 1500 positions. The other positions, including internship, other, part-time, temporary, and volunteer, have very few positions relative to full-time positions.
+
+```{r work_type_relationship}
+#| echo: false
+#| fig_width: 5 
+#| fig_height: 1
+worktype_apps <- linkedin |>
+  ggplot(aes(x = annual_max_salary, y = applies, color = formatted_work_type)) +
+  geom_point() +
+  geom_smooth(method = 'lm',formula = y ~ x, se = F) +
+  labs(color = "Type of Work",
+       x = "Max Annual Salary (Thousands of USD)",
+       y = "Number of Applications",
+       title = "Number of Applications by Maximum Annual Salary in 
+       Thousands of USD and Type of Work")
+worktype_apps
+```
+
+There could be an interaction effect between the type of work format of the job and the maximum annual salary, as a temporary or part-time position has less time to contribute and therefore recieve less. There overall appears to be a weak effect on the number of applications, but there appears to be a larger effect of type of work on temporary positions.
+
 ```{r}
-glance(linkedin_yr_fit_ben)
+#| echo: false
+linkedin2 <- linkedin |> 
+  drop_na(formatted_experience_level) |>
+  filter(formatted_experience_level != "")
 ```
 
 ```{r}
-glance(linkedin_yr_fit_hr)
+#| echo: false
+#| fig_width: 5 
+#| fig_height: 1
+experience_apps <- linkedin2 |>
+  ggplot(aes(x = views, y = applies, color = formatted_experience_level)) +
+  geom_point() + 
+  geom_smooth(method = 'lm',formula = y ~ x, se = F) +
+  labs(x = "Number of Views",
+       y = "Number of Applications",
+       color = "Experience Level",
+       title = "Number of Applications Based on the 
+       Experience Level Required and Views")
+experience_apps
 ```
 
-```{r}
-linkedin_yr_fit_5 <- linear_reg() |>
-  fit(per_applies~ hour + max_salary, data = linkedin_train) 
+Another potential interaction effect is the number of views and experience level. Different positions are more sought after on LinkedIn over others, depending on viewers' backgrounds. The number of applications increases per number of views for a position requiring associate experience increases at a more rapid rate than those for other positions, although all positions have some sort of impact associated with views and applications.
 
-glance(linkedin_yr_fit_5)
-```
+## Analysis approach
 
-```{r}
-linkedin_yr_fit_5 <- linear_reg() |>
-  fit(per_applies~ sponsored, data = linkedin_train) 
+A linear regression model is fitting for this prediction, as the number of applications for a listing is a numerical variable. The number of views the post received, the maximum salary of the position, the number of benefits provided by the job, the number of followers the company has, the number of employees the company had at the time of listing, if remote working is permitted, and the location of the job as metropolitan or rural could be used as potential useful predictors of the amount of applications for a job on a LinkedIn job listing. These variables include views, employee_count, remote_allowed, follower_count, max_salary multiplied by the period in pay_period to find annual pay, benefits manipulated to be a categorical variable, and location manipulated to be a categorical variable.
 
-glance(linkedin_yr_fit_5)
-```
+## Data dictionary
 
-
-```{r}
-linkedin_new <- linkedin_yearly |>
-  mutate(applied_10 = if_else(per_applies > 0.1, 1, 0))
-```
-
-
-```{r}
-linkedin_new <- linkedin_yearly |>
-  mutate(applied_10 = if_else(per_applies > 0.1, 1, 0))
-linkedin_new$applied_10 <- as.factor(linkedin_new$applied_10)
-linkedin_new
-```
-
-```{r}
-linkedin_new <- linkedin_yearly |>
-  mutate(applied_10 = if_else(per_applies > 0.1, 1, 0))
-linkedin_new$applied_10 <- as.factor(linkedin_new$applied_10)
-
-set.seed(210)
-
-linkedin_split_new <- initial_split(linkedin_new)
-linkedin_train_new <- training(linkedin_split_new)
-linkedin_test_new  <- testing(linkedin_split_new)
-
-
-linkedin_yr_fit_log <- logistic_reg() |>
-  set_engine("glm") |>
-  fit(applied_10~ max_salary, data = linkedin_train_new, family = "binomial") 
-
-glance(linkedin_yr_fit_log)
-```
-
-```{r}
-linkedin_pred <- predict(linkedin_yr_fit_log, linkedin_test_new, type = "prob") |> 
-  bind_cols(linkedin_test_new) 
-
-linkedin_pred |>
-  roc_curve(
-    truth = applied_10,
-    .pred_1,
-    event_level = "second"
-  ) |>
-  autoplot()
-```
-
-
-
-```{r}
-linkedin_new
-```
-
-
-```{r}
-linkedin_new |>
-  ggplot(aes(x = tot_benefits, y = per_applies)) + 
-  geom_point()
-```
-
-```{r}
-linkedin_new
-```
+The data dictionary can be found [here](https://docs.google.com/document/d/15LOwqM0wwdBLOcGvvohmnEjVNeWslftThWEikwoEWNo/edit?usp=sharing).
