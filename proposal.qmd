@@ -16,6 +16,7 @@ library(tidyverse)
 library(tidymodels)
 library(knitr)
 library(patchwork)
+library(janitor)
 job_postings <-read.csv("data/job_postings.csv")
 benefits <-read.csv("data/benefits.csv")
 employee <-read.csv("data/employee_counts.csv")
@@ -26,7 +27,8 @@ employee <-read.csv("data/employee_counts.csv")
 benefits <- benefits |>
   select(-inferred) |>
   mutate(count = 1) |>
-  pivot_wider(names_from = "type", values_from = "count")
+  pivot_wider(names_from = "type", values_from = "count") |>
+  clean_names()
 ```
 
 ```{r joining_jobs_employee}
@@ -41,6 +43,53 @@ linkedin <- jobs_employee |>
   left_join(benefits, by = join_by("job_id"))
 
 linkedin <- linkedin |> distinct(job_id, .keep_all = TRUE)
+```
+
+```{r make_zeros}
+#| echo: false
+linkedin["medical_insurance"][is.na(linkedin["medical_insurance"])] <- 0
+linkedin["dental_insurance"][is.na(linkedin["dental_insurance"])] <- 0
+linkedin["x401_k"][is.na(linkedin["x401_k"])] <- 0
+linkedin["paid_maternity_leave"][is.na(linkedin["paid_maternity_leave"])] <- 0
+linkedin["disability_insurance"][is.na(linkedin["disability_insurance"])] <- 0
+linkedin["vision_insurance"][is.na(linkedin["vision_insurance"])] <- 0
+linkedin["tuition_assistance"][is.na(linkedin["tuition_assistance"])] <- 0
+linkedin["pension_plan"][is.na(linkedin["pension_plan"])] <- 0
+linkedin["paid_paternity_leave"][is.na(linkedin["paid_paternity_leave"])] <- 0
+linkedin["commuter_benefits"][is.na(linkedin["commuter_benefits"])] <- 0
+linkedin["student_loan_assistance"][is.na(linkedin["student_loan_assistance"])] <- 0
+linkedin["child_care_support"][is.na(linkedin["child_care_support"])] <- 0
+```
+
+```{r total_benefits}
+#| echo: false
+linkedin <- linkedin |>
+  mutate(all_benefits = rowSums(across(c(medical_insurance, 
+                                dental_insurance, 
+                                x401_k, 
+                                paid_maternity_leave,
+                                disability_insurance,
+                                vision_insurance,
+                                tuition_assistance,
+                                pension_plan,
+                                paid_paternity_leave,
+                                commuter_benefits,
+                                student_loan_assistance,
+                                child_care_support))))
+```
+```{r drop_columns}
+linkedin <- subset(linkedin, select = -c(medical_insurance, 
+                                dental_insurance, 
+                                x401_k, 
+                                paid_maternity_leave,
+                                disability_insurance,
+                                vision_insurance,
+                                tuition_assistance,
+                                pension_plan,
+                                paid_paternity_leave,
+                                commuter_benefits,
+                                student_loan_assistance,
+                                child_care_support))
 ```
 
 ## Introduction
@@ -113,15 +162,14 @@ app_dist <- linkedin |>
 views_dist + app_dist
 ```
 
-```{r}
+```{r applies_summary}
 #| echo: false
 summary(linkedin$applies)
 ```
 
 Fig 1. The distribution of the number of applications for a job listing on LinkedIn is right-skewed and uni-modal, with fewer applications for a job listing most prevalent. Given that the distribution is skewed, the center is 8 applications, as estimated by the median. The IQR describing the spread of the middle 50% of data is 23 applications (26 - 3). There are 2 major outliers. One popular position is the job listing for Customer Success Manager at Noom with 1420 applications, another is the Customer Service Representative at Position Purpose with 980 applications.
 
-```{r}
-#| echo: false
+```{r views_summary}
 summary(linkedin$views)
 ```
 
