@@ -50,6 +50,14 @@ benefits <- benefits |>
   pivot_wider(names_from = "type", values_from = "count")
 ```
 
+```{r}
+
+benefits <- replace(benefits, is.na(benefits), 0)
+benefits$tot_benefits <- rowSums(benefits == 1)
+benefits_total <- benefits[, c('job_id', 'tot_benefits')]
+```
+
+
 
 ```{r joining_jobs_employee}
 #| echo: false
@@ -60,93 +68,299 @@ jobs_employee <- job_postings |>
 ```{r joining_final_set}
 #| echo: false
 linkedin <- jobs_employee |>
-  left_join(benefits, by = join_by("job_id"))
+  left_join(benefits_total, by = join_by("job_id"))
 
-linkedin <- linkedin |> distinct(job_id, .keep_all = TRUE)
-```
-
-
-```{r}
-linkedin <- linkedin |>
+linkedin_yearly <- linkedin |> 
+  distinct(job_id, .keep_all = TRUE) |>
   mutate(per_applies = applies/views) |>
-  filter(per_applies < 1)
-```
+  filter(per_applies < 1) |>
+  filter(pay_period == "YEARLY") |>
+  mutate(original_listed_time = as.POSIXct(original_listed_time/1000, origin = "1970-01-01", tz = "EST")) 
 
-```{r mutate_pay_nums}
-#| warning: false
-#| echo: false
-linkedin <- linkedin |>
-  mutate(pay_period = recode(pay_period, YEARLY = 1, HOURLY = 2080))
-```
-
-```{r annual_salary_manipulation}
-#| echo: false
-linkedin <- linkedin |>
-   mutate(annual_max_salary = pay_period * max_salary/1000)
+linkedin_yearly$hour <- sapply(strsplit(as.character(linkedin_yearly$original_listed_time), ' '), function(x) {
+  time_parts <- unlist(strsplit(x[2], ':'))
+  return(time_parts[1])
+})
 ```
 
 ```{r}
-linkedin |>
-  filter(annual_max_salary > 500)
+linkedin_yearly
 ```
 
-
 ```{r}
-names(linkedin)
-```
-```{r}
-linkedin
-```
-
-
-```{r}
-linkedin |>
-  ggplot(aes(x = annual_max_salary, y = per_applies)) +
+linkedin_yearly |>
+  ggplot(aes(x = hour, y = per_applies)) + 
   geom_point()
 ```
 
+
+
 ```{r}
-linkedin |>
-  ggplot(aes(x = per_applies)) + 
-  geom_histogram()
+# Sample data frame
+data <- data.frame(timestamp = c('2023-11-12 08:30:45', '2023-11-12 15:45:20', '2023-11-12 22:10:05'))
+
+# Splitting timestamp and extracting the hour
+data$hour <- sapply(strsplit(as.character(data$timestamp), ' '), function(x) {
+  time_parts <- unlist(strsplit(x[2], ':'))
+  return(time_parts[1])
+})
+
+# Display the resulting data frame
+print(data)
+
+```
+
+
+```{r}
+linkedin_yearly
+```
+
+```{r}
+#1692732000000
+timestamp <- 1692732000
+
+#timestamp <- 1692817626
+formatted_date <- as.POSIXct(timestamp, origin = "1970-01-01", tz = "UTC")
+print(formatted_date)
+
 ```
 
 
 
 ```{r}
-linkedin
+linkedin_yearly |>
+  filter(employee_count < 1000) |>
+  ggplot(aes(x = employee_count, y = per_applies)) + 
+  geom_point()
+```
+
+
+```{r}
+linkedin_hourly <- linkedin |> 
+  distinct(job_id, .keep_all = TRUE) |>
+  mutate(per_applies = applies/views) |>
+  filter(per_applies < 1) |>
+  filter(pay_period == "YEARLY")
 ```
 
 
 ```{r}
 set.seed(210)
-
-linkedin_split <- initial_split(linkedin)
+linkedin_split <- initial_split(linkedin_yearly, prop = 0.8)
 linkedin_train <- training(linkedin_split)
-linkedin_test  <- testing(linkedin_split)
+linkedin_test <- testing(linkedin_split)
+```
+
+```{r}
+linkedin_train
+```
+
+
+```{r}
+
+linkedin_yr_rec <- recipe(per_applies ~ job_id + max_salary + follower_count + formatted_experience_level, data = linkedin_train) |> 
+  update_role(job_id, new_role = "ID") |> 
+  step_mutate(max_salary = max_salary / 1000000) |>
+  step_mutate(follower_count = follower_count / 100000000) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |> 
+  step_zv(all_predictors())
+```
+
+```{r}
+linkedin_yr_rec1 <- recipe(per_applies ~ job_id + max_salary + follower_count, data = linkedin_train) |> 
+  update_role(job_id, new_role = "ID") |> 
+  step_mutate(max_salary = max_salary / 1000000) |>
+  step_mutate(follower_count = follower_count / 100000000) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |> 
+  step_zv(all_predictors())
+```
+
+```{r}
+
+linkedin_yr_rec_ben <- recipe(per_applies ~ job_id + max_salary + tot_benefits, data = linkedin_train) |> 
+  update_role(job_id, new_role = "ID") |> 
+  step_mutate(max_salary = max_salary / 1000000) |>
+  #step_mutate(follower_count = follower_count / 100000000) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |> 
+  step_zv(all_predictors())
+```
+
+```{r}
+linkedin_yr_rec_hr <- recipe(per_applies ~ job_id + max_salary + hour, data = linkedin_train) |> 
+  update_role(job_id, new_role = "ID") |> 
+  step_mutate(max_salary = max_salary / 1000000) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |> 
+  step_zv(all_predictors())
 ```
 
 
 
 
 ```{r}
-linkedin_fit <- linear_reg() |>
-  set_engine("lm") |>
-#  fit(per_applies ~ med_salary + formatted_work_type + formatted_experience_level, data = linkedin_train)
-  fit(per_applies ~ med_salary, data = linkedin_train)
+#specify the model
+linkedin_yr_spec <- linear_reg() |>
+  set_engine("lm")
 
+#build model workflow
+linkedin_yr_workflow <- workflow() |>
+  add_model(linkedin_yr_spec) |>
+  add_recipe(linkedin_yr_rec) 
 
-tidy(linkedin_fit) |> 
-  kable(digits = 2)
+# fit the model 
+linkedin_yr_fit <- linkedin_yr_workflow |>
+  fit(data = linkedin_train) 
 
+tidy(linkedin_yr_fit) |>
+  kable(digits = 3)
 ```
 
 ```{r}
-glance(linkedin_fit)
+#specify the model
+linkedin_yr_spec1 <- linear_reg() |>
+  set_engine("lm")
+
+#build model workflow
+linkedin_yr_workflow1 <- workflow() |>
+  add_model(linkedin_yr_spec1) |>
+  add_recipe(linkedin_yr_rec1) 
+
+# fit the model 
+linkedin_yr_fit1 <- linkedin_yr_workflow1 |>
+  fit(data = linkedin_train) 
+
+tidy(linkedin_yr_fit1) |>
+  kable(digits = 3)
+```
+
+```{r}
+#specify the model
+linkedin_yr_spec_ben <- linear_reg() |>
+  set_engine("lm")
+
+#build model workflow
+linkedin_yr_workflow_ben <- workflow() |>
+  add_model(linkedin_yr_spec_ben) |>
+  add_recipe(linkedin_yr_rec_ben) 
+
+# fit the model 
+linkedin_yr_fit_ben <- linkedin_yr_workflow_ben |>
+  fit(data = linkedin_train) 
+
+tidy(linkedin_yr_fit_ben) |>
+  kable(digits = 3)
+```
+```{r}
+#specify the model
+linkedin_yr_spec_hr <- linear_reg() |>
+  set_engine("lm")
+
+#build model workflow
+linkedin_yr_workflow_hr <- workflow() |>
+  add_model(linkedin_yr_spec_hr) |>
+  add_recipe(linkedin_yr_rec_hr) 
+
+# fit the model 
+linkedin_yr_fit_hr <- linkedin_yr_workflow_hr |>
+  fit(data = linkedin_train) 
+
+tidy(linkedin_yr_fit_hr) |>
+  kable(digits = 3)
+```
+
+
+BIC-- -2771, -2757, -1315
+```{r}
+glance(linkedin_yr_fit1)
+```
+
+```{r}
+glance(linkedin_yr_fit)
+```
+```{r}
+glance(linkedin_yr_fit_ben)
+```
+
+```{r}
+glance(linkedin_yr_fit_hr)
+```
+
+```{r}
+linkedin_yr_fit_5 <- linear_reg() |>
+  fit(per_applies~ hour + max_salary, data = linkedin_train) 
+
+glance(linkedin_yr_fit_5)
+```
+
+```{r}
+linkedin_yr_fit_5 <- linear_reg() |>
+  fit(per_applies~ sponsored, data = linkedin_train) 
+
+glance(linkedin_yr_fit_5)
+```
+
+
+```{r}
+linkedin_new <- linkedin_yearly |>
+  mutate(applied_10 = if_else(per_applies > 0.1, 1, 0))
+```
+
+
+```{r}
+linkedin_new <- linkedin_yearly |>
+  mutate(applied_10 = if_else(per_applies > 0.1, 1, 0))
+linkedin_new$applied_10 <- as.factor(linkedin_new$applied_10)
+linkedin_new
+```
+
+```{r}
+linkedin_new <- linkedin_yearly |>
+  mutate(applied_10 = if_else(per_applies > 0.1, 1, 0))
+linkedin_new$applied_10 <- as.factor(linkedin_new$applied_10)
+
+set.seed(210)
+
+linkedin_split_new <- initial_split(linkedin_new)
+linkedin_train_new <- training(linkedin_split_new)
+linkedin_test_new  <- testing(linkedin_split_new)
+
+
+linkedin_yr_fit_log <- logistic_reg() |>
+  set_engine("glm") |>
+  fit(applied_10~ max_salary, data = linkedin_train_new, family = "binomial") 
+
+glance(linkedin_yr_fit_log)
+```
+
+```{r}
+linkedin_pred <- predict(linkedin_yr_fit_log, linkedin_test_new, type = "prob") |> 
+  bind_cols(linkedin_test_new) 
+
+linkedin_pred |>
+  roc_curve(
+    truth = applied_10,
+    .pred_1,
+    event_level = "second"
+  ) |>
+  autoplot()
 ```
 
 
 
+```{r}
+linkedin_new
+```
 
 
+```{r}
+linkedin_new |>
+  ggplot(aes(x = tot_benefits, y = per_applies)) + 
+  geom_point()
+```
 
+```{r}
+linkedin_new
+```
