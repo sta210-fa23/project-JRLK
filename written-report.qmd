@@ -1,6 +1,6 @@
 ---
 title: "Factors Impacting Number of LinkedIn Job Applications per Post View"
-author: "JRLK - Jess Ringness, Rebekah Kim, Laura Cai, Karen Dong"
+author: "JRLK - Jessie Ringness, Rebekah Kim, Laura Cai, Karen Dong"
 date: 11/14/2023
 format: pdf
 execute: 
@@ -79,7 +79,7 @@ linkedin_subset <- linkedin |>
   drop_na(original_listed_time)
 ```
 
-```{r hour_mutations}
+```{r orig_hour_mutations}
 #| echo: false
 linkedin_subset$hour_listed <- sapply(strsplit(as.character(linkedin_subset$original_listed_time), ' '), function(x) {
   time_parts <- unlist(strsplit(x[2], ':'))
@@ -87,74 +87,52 @@ linkedin_subset$hour_listed <- sapply(strsplit(as.character(linkedin_subset$orig
 })
 ```
 
-```{r}
+```{r numerical_plots}
 #| echo: false
 salary_hist <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary)) + 
   geom_histogram()
-```
-
-```{r}
-#| echo: false
 follower_hist <- linkedin_subset |>
   ggplot(aes(x = follower_count)) + 
   geom_histogram()
-```
-
-```{r}
-#| echo: false
 hr_hist <- linkedin_subset |>
   ggplot(aes(x = as.numeric(hour_listed))) + 
   geom_histogram()
+
+(salary_hist + hr_hist) / (follower_hist)
 ```
 
-```{r}
+```{r }
 #| echo: false
-salary_hist +follower_hist +hr_hist
-```
-
-```{r}
-#| echo: false
-linkedin_subset |>
+experience_plot <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary, y = per_applies, color = formatted_experience_level)) +
-  geom_point() +
+  geom_point() + 
+  geom_smooth(method = 'lm',formula = y ~ x, se = F) +
+  labs(x = "Hourly Maximum Salary",
+       y = "Applications per view",
+       color = "Experience Level",
+       title = "Applications per view based on 
+       experience level and maximum salary") + 
   facet_wrap(~formatted_experience_level)
+experience_plot 
 ```
 
 ```{r}
 #| echo: false
-sal_scat <- linkedin_subset |>
+salary_scat <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary, y = per_applies)) +
   geom_point()
-```
 
-```{r}
-#| echo: false
 follow_scat <- linkedin_subset |>
+  filter(follower_count > 10000) |>
   ggplot(aes(x = follower_count, y = per_applies)) +
   geom_point()
-```
 
-```{r}
-#| echo: false
 hr_scat <- linkedin_subset |>
   ggplot(aes(x = hour_listed, y = per_applies)) +
   geom_point()
-```
 
-```{r}
-#| echo: false
-sal_scat
-```
-
-```{r}
-#| echo: false
-follow_scat
-```
-
-```{r}
-#| echo: false
-hr_scat
+(follow_scat + salary_scat) / hr_scat
 ```
 
 ```{r}
@@ -216,9 +194,7 @@ Because \`per_applies\` is a numerical variable, a linear regression model would
 
 We split the \`linkedin\` dataset into training and testing data, with 75% of the data in training and 25% in testing. We then used cross-fold validation with 12 folds on the training data set to find the mean summary statistics (AIC,  BIC, Adjusted R-Squared) for each model and compared the different values to find the best possible model. This process was repeated for models containing each combination of predictor variables. We set a seed of (2) when splitting and folding the data to ensure reproducibility.
 
-## Analysis approach
-
-A linear regression model is fitting for this prediction, as the number of applications for a listing is a numerical variable. The number of views the post received, the maximum salary of the position, the number of benefits provided by the job, the number of followers the company has, the number of employees the company had at the time of listing, if remote working is permitted, and the location of the job as metropolitan or rural could be used as potential useful predictors of the amount of applications for a job on a LinkedIn job listing. These variables include views, employee_count, remote_allowed, follower_count, max_salary multiplied by the period in pay_period to find annual pay, benefits manipulated to be a categorical variable, and location manipulated to be a categorical variable.
+## Results
 
 ## Data dictionary
 
