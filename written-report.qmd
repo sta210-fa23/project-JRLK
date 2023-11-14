@@ -83,7 +83,7 @@ linkedin_subset <- linkedin |>
 #| echo: false
 linkedin_subset$hour_listed <- sapply(strsplit(as.character(linkedin_subset$original_listed_time), ' '), function(x) {
   time_parts <- unlist(strsplit(x[2], ':'))
-  return(time_parts[1])
+  return(as.numeric(time_parts[1]))
 })
 ```
 
@@ -140,11 +140,6 @@ hr_scat <- linkedin_subset |>
 group <- linkedin_subset |>
   group_by(hour_listed) |>
   summarize(mean_per_applies = mean(per_applies))
-```
-
-```{r}
-#| echo: false
-group$hour = as.numeric(group$hour_listed)
 ```
 
 ```{r}
@@ -212,6 +207,7 @@ set_engine("lm")
 
 ```{r recipe_1}
 #| echo: false
+set.seed(2)
 linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_count + remote_allowed + formatted_experience_level + if_benefits + hour_listed, data = linkedin_train) |>
   update_role(job_id, new_role = "ID") |> 
   step_center(hourly_max_salary, follower_count) |>
@@ -221,12 +217,14 @@ linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_c
 
 ```{r workflow_1}
 #| echo: false
+set.seed(2)
 linkedin_wflow1 <- workflow() |>
 add_recipe(linkedin_recipe1) |>
 add_model(linkedin_spec)
 ```
 
 ```{r}
+set.seed(2)
 calc_model_stats <- function(x) {
   glance(extract_fit_parsnip(x)) |>
     select(adj.r.squared, AIC, BIC)
@@ -235,6 +233,7 @@ calc_model_stats <- function(x) {
 
 ```{r resample_mean_stats}
 #| echo: false
+set.seed(2)
 linkedin_fit_rs1 <- linkedin_wflow1 |>
   fit_resamples(resamples = folds, 
                 control = control_resamples(extract = calc_model_stats))
@@ -290,6 +289,12 @@ glance(linkedin_yr_fit)
 
 Looking at the how the maximum salary, follower count, whether the job allows remote, the experience level, if there were benefits listed, and the hour at which the job was listed all affected the ratio of applications to views, there is no significant relationship between these variables, since the adjusted R^2 s 0.0589, which is very low. This means that about 6% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables we are studying, indicating no relationship.We tried different combinations of variables to see if there was any relationship between the variables with percent of viewers that applied.  
 
-## Data dictionary
+## Discussion + Conclusion
 
-The data dictionary can be found [here](https://docs.google.com/document/d/15LOwqM0wwdBLOcGvvohmnEjVNeWslftThWEikwoEWNo/edit?usp=sharing).
+While we had expected the percent of viewers that applied for each job to increase as the maximum salary and number of followers increase, our model and EDA have demonstrated how there is no relationship between these variables, along with having a remote option, the job experience level, the hour at which it was posted, and if the benefits were posted, and our response variable of the percent of viewers who applied. 
+
+Some of the limitations with our analysis may include assumption errors with the number of hours the job would work for the jobs listed as yearly and monthly, the filtering of outliers and deciding the thresholds for outliers, model complexity where we are fitting many predictor variables, and the lack of data considering how long the jobs were listed. 
+
+Some ways our analysis could be improved would be filtering out the outliers better, deciding the thresholds for views, follower count, salaries, etc, that would avoid skewing the data. 
+
+Potential issues relating to the data would include the time scraped from LinkedIn, since many of the original listed times and the listed times (the time it was scraped) is exactly the same, which is not meaningful in determining the number of applications over a certain amount of time. 
