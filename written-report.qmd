@@ -79,8 +79,52 @@ summary(linkedin$applies)
 ```
 
 ```{r}
-linkedin_subset |>
+summary(linkedin$follower_count)
+```
+```{r}
+linkedin
+```
+
+
+
+```{r}
+linkedin_subset <- linkedin|>
+  mutate(per_applies = applies/views) |>
+  mutate(original_listed_time = as.POSIXct(original_listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
+  mutate(listed_time = as.POSIXct(listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
+  drop_na(hourly_max_salary) |>
+  drop_na(per_applies) |>
+  drop_na(tot_benefits) |>
+  drop_na(follower_count) |>
+  drop_na(formatted_experience_level) |>
+  drop_na(remote_allowed)
+
+linkedin_subset
+```
+
+
+
+```{r}
+linkedin_subset <- linkedin|>
+  filter(between(hourly_max_salary, 30.610, 71.000)) |>
+  filter(between(views, 6, 78.00))  |>
+  mutate(per_applies = applies/views) |>
+  mutate(original_listed_time = as.POSIXct(original_listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
+  mutate(listed_time = as.POSIXct(listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
+  drop_na(hourly_max_salary) |>
+  drop_na(per_applies) |>
+  drop_na(tot_benefits) |>
+  drop_na(follower_count) |>
+  drop_na(formatted_experience_level) |>
+  drop_na(remote_allowed)
+
+
+linkedin_subset$hour_posted <- sapply(strsplit(as.character(linkedin_subset$original_listed_time), ' '), function(x) {
+  time_parts <- unlist(strsplit(x[2], ':'))
+  return(time_parts[1])
+}) 
   
+linkedin_subset
 ```
 
 
