@@ -81,58 +81,58 @@ summary(linkedin$applies)
 ```{r}
 summary(linkedin$follower_count)
 ```
-```{r}
-linkedin
-```
-
 
 
 ```{r}
+linkedin$if_benefits <- factor(ifelse(linkedin$tot_benefits > 0, "listed", "none"),
+  levels = c("none", "listed"))
+
 linkedin_subset <- linkedin|>
   mutate(per_applies = applies/views) |>
   mutate(original_listed_time = as.POSIXct(original_listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
   mutate(listed_time = as.POSIXct(listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
   drop_na(hourly_max_salary) |>
   drop_na(per_applies) |>
-  drop_na(tot_benefits) |>
   drop_na(follower_count) |>
   drop_na(formatted_experience_level) |>
   drop_na(remote_allowed)
 
-linkedin_subset
-```
-
-
-
-```{r}
-linkedin_subset <- linkedin|>
-  filter(between(hourly_max_salary, 30.610, 71.000)) |>
-  filter(between(views, 6, 78.00))  |>
-  mutate(per_applies = applies/views) |>
-  mutate(original_listed_time = as.POSIXct(original_listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
-  mutate(listed_time = as.POSIXct(listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
-  drop_na(hourly_max_salary) |>
-  drop_na(per_applies) |>
-  drop_na(tot_benefits) |>
-  drop_na(follower_count) |>
-  drop_na(formatted_experience_level) |>
-  drop_na(remote_allowed)
-
-
-linkedin_subset$hour_posted <- sapply(strsplit(as.character(linkedin_subset$original_listed_time), ' '), function(x) {
+linkedin_subset$hour_listed <- sapply(strsplit(as.character(linkedin_subset$original_listed_time), ' '), function(x) {
   time_parts <- unlist(strsplit(x[2], ':'))
   return(time_parts[1])
-}) 
-  
+})
+
 linkedin_subset
 ```
-
+```{r}
+library(ggplot2)
+library(patchwork)
+```
 
 ```{r}
-linkedin |>
+salary_hist <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary)) + 
   geom_histogram()
 ```
+
+```{r}
+follower_hist <- linkedin_subset |>
+  ggplot(aes(x = follower_count)) + 
+  geom_histogram()
+```
+
+```{r}
+hr_hist <- linkedin_subset |>
+  ggplot(aes(x = as.numeric(hour_listed))) + 
+  geom_histogram()
+  
+hr_hist
+```
+
+```{r}
+salary_hist +follower_hist +hr_hist
+```
+
 
 
 ```{r annual_salary_manipulation}
