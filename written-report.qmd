@@ -31,6 +31,18 @@ benefits <- benefits |>
   clean_names()
 ```
 
+```{r}
+benefits <- replace(benefits, is.na(benefits), 0)
+benefits
+```
+
+
+```{r}
+benefits <- replace(benefits, is.na(benefits), 0)
+benefits$tot_benefits <- rowSums(benefits == 1)
+benefits_total <- benefits[, c('job_id', 'tot_benefits')]
+```
+
 ```{r joining_jobs_employee}
 #| echo: false
 jobs_employee <- job_postings |>
@@ -40,10 +52,52 @@ jobs_employee <- job_postings |>
 ```{r joining_final_set}
 #| echo: false
 linkedin <- jobs_employee |>
-  left_join(benefits, by = join_by("job_id"))
+  left_join(benefits_total, by = join_by("job_id"))
 
 linkedin <- linkedin |> distinct(job_id, .keep_all = TRUE)
 ```
+
+```{r}
+linkedin
+```
+```{r mutate_pay_nums}
+#| warning: false
+#| echo: false
+linkedin <- linkedin |>
+  mutate(pay_period = recode(pay_period, YEARLY = 1/2080, HOURLY = 1, MONTHLY = 1/160)) |>
+  mutate(hourly_max_salary = pay_period * max_salary)
+
+summary(linkedin$hourly_max_salary)
+```
+
+```{r}
+summary(linkedin$views)
+```
+
+```{r}
+summary(linkedin$applies)
+```
+
+```{r}
+linkedin_subset |>
+  
+```
+
+
+```{r}
+linkedin |>
+  ggplot(aes(x = hourly_max_salary)) + 
+  geom_histogram()
+```
+
+
+```{r annual_salary_manipulation}
+#| echo: false
+linkedin <- linkedin |>
+   mutate(annual_max_salary = pay_period * max_salary/1000)
+```
+
+
 
 ```{r make_zeros}
 #| echo: false
@@ -90,6 +144,11 @@ linkedin <- subset(linkedin, select = -c(medical_insurance,
                                 commuter_benefits,
                                 student_loan_assistance,
                                 child_care_support))
+```
+
+
+```{r}
+linkedin
 ```
 
 
@@ -220,8 +279,22 @@ linkedin_yearly |>
   ggplot(aes(x = views)) + 
   geom_histogram()
 ```
+
 ```{r}
-summary(linkedin_yearly$views)
+linkedin |>
+  filter(views < 75) |>
+  filter(views > 25) |>
+  ggplot(aes(x = max_salary, y = per_applies)) + 
+  geom_point()
+```
+
+```{r}
+linkedin
+```
+
+
+```{r}
+summary(linkedin$views)
 ```
 
 
