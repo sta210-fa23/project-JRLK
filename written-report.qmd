@@ -196,6 +196,39 @@ We split the \`linkedin\` dataset into training and testing data, with 75% of th
 
 ## Results
 
+```{r}
+linkedin_yr_rec <- recipe(per_applies ~ job_id + hourly_max_salary + follower_count + remote_allowed+ formatted_experience_level + if_benefits + hour_listed, data = linkedin_subset) |> 
+  update_role(job_id, new_role = "ID") |> 
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |> 
+  step_zv(all_predictors())
+```
+
+```{r}
+#specify the model
+linkedin_yr_spec <- linear_reg() |>
+  set_engine("lm")
+
+#build model workflow
+linkedin_yr_workflow <- workflow() |>
+  add_model(linkedin_yr_spec) |>
+  add_recipe(linkedin_yr_rec) 
+
+# fit the model 
+linkedin_yr_fit <- linkedin_yr_workflow |>
+  fit(data = linkedin_subset) 
+
+tidy(linkedin_yr_fit) |>
+  kable(digits = 3)
+```
+
+```{r}
+glance(linkedin_yr_fit)
+```
+
+
+Looking at the how the maximum salary, follower count, whether the job allows remote, the experience level, if there were benefits listed, and the hour at which the job was listed all affected the ratio of applications to views, there is no significant relationship between these variables, since the adjusted R^2 s 0.0589, which is very low. This means that about 6% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables we are studying, indicating no relationship.We tried different combinations of variables to see if there was any relationship between the variables with percent of viewers that applied.  
+
 ## Data dictionary
 
 The data dictionary can be found [here](https://docs.google.com/document/d/15LOwqM0wwdBLOcGvvohmnEjVNeWslftThWEikwoEWNo/edit?usp=sharing).
