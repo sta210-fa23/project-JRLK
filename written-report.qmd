@@ -194,10 +194,71 @@ Because \`per_applies\` is a numerical variable, a linear regression model would
 
 We split the \`linkedin\` dataset into training and testing data, with 75% of the data in training and 25% in testing. We then used cross-fold validation with 12 folds on the training data set to find the mean summary statistics (AIC,  BIC, Adjusted R-Squared) for each model and compared the different values to find the best possible model. This process was repeated for models containing each combination of predictor variables. We set a seed of (2) when splitting and folding the data to ensure reproducibility.
 
+```{r split_data}
+#| echo: false
+set.seed(2)
+linkedin_split <- initial_split(linkedin_subset)
+linkedin_train <- training(linkedin_split)
+linkedin_test <- testing(linkedin_split)
+```
+
+```{r cross_val}
+#| echo: false
+set.seed(2)
+folds <- vfold_cv(linkedin_train, v = 12)
+linkedin_spec <- linear_reg() |>
+set_engine("lm")
+```
+
+```{r recipe_1}
+#| echo: false
+linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_count + remote_allowed + formatted_experience_level + if_benefits + hour_listed, data = linkedin_train) |>
+  update_role(job_id, new_role = "ID") |> 
+  step_center(hourly_max_salary, follower_count) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+```
+
+```{r workflow_1}
+#| echo: false
+linkedin_wflow1 <- workflow() |>
+add_recipe(linkedin_recipe1) |>
+add_model(linkedin_spec)
+```
+
+```{r}
+calc_model_stats <- function(x) {
+  glance(extract_fit_parsnip(x)) |>
+    select(adj.r.squared, AIC, BIC)
+}
+```
+
+```{r resample_mean_stats}
+#| echo: false
+linkedin_fit_rs1 <- linkedin_wflow1 |>
+  fit_resamples(resamples = folds, 
+                control = control_resamples(extract = calc_model_stats))
+collect_metrics(linkedin_fit_rs1, summarize = TRUE)
+map_df(linkedin_fit_rs1$.extracts, ~ .x[[1]][[1]]) |>
+  summarise(mean_adj_rsq = mean(adj.r.squared), 
+            mean_aic = mean(AIC), 
+            mean_bic = mean(BIC))
+```
+
+The adjusted R^2 value for a model including `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits` was 0.0076. We removed variables one by one, but each model resulted in a lower R^2 value, indicating that a model including all mentioned variables is the best. 
+
+```{r}
+linkedin_fit <- linkedin_wflow1 |>
+  fit(data = linkedin_test)
+linkedin_test_pred <- predict(linkedin_fit, linkedin_test) |>
+  bind_cols(linkedin_test)
+rsq(linkedin_test_pred, truth = per_applies, estimate = .pred)
+```
+
 ## Results
 
 ```{r}
-linkedin_yr_rec <- recipe(per_applies ~ job_id + hourly_max_salary + follower_count + remote_allowed+ formatted_experience_level + if_benefits + hour_listed, data = linkedin_subset) |> 
+linkedin_yr_rec <- recipe(per_applies ~ job_id + hourly_max_salary + follower_count + remote_allowed + formatted_experience_level + if_benefits + hour_listed, data = linkedin_subset) |> 
   update_role(job_id, new_role = "ID") |> 
   step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors()) |> 
