@@ -147,6 +147,31 @@ linkedin_yearly |>
   geom_point() +
   facet_wrap(~formatted_experience_level)
 ```
+```{r}
+linkedin_yearly |>
+  ggplot(aes(x = max_salary, y = applies)) +
+  geom_point()
+```
+```{r}
+linkedin_yearly |>
+  filter(views < 100) |>
+  ggplot(aes(x = views)) + 
+  geom_histogram()
+```
+
+
+```{r}
+linkedin_yearly |>
+  filter(applies > 1000)
+```
+
+
+
+```{r}
+linkedin_yearly
+```
+
+
 
 ```{r}
 linkedin_yearly |>
@@ -159,6 +184,10 @@ linkedin_yearly |>
   geom_point()
 ```
 
+```{r}
+linkedin_yearly |>
+  filter(per_applies > 0.5)
+```
 
 
 ```{r}
@@ -168,7 +197,7 @@ group <- linkedin_yearly |>
 ```
 
 ```{r}
-group
+group$hour = as.numeric(group$hour)
 ```
 
 idk if looking at hours is meaningful at all esp because they aren't all posting in est
@@ -179,6 +208,53 @@ group |>
   ggplot(aes(x = hour, y = mean_per_applies)) +
   geom_col()
 ```
+
+```{r}
+linkedin_yearly |>
+  ggplot(aes(x = per_applies)) + 
+  geom_histogram()
+```
+
+```{r}
+linkedin_yearly |>
+  ggplot(aes(x = views)) + 
+  geom_histogram()
+```
+```{r}
+summary(linkedin_yearly$views)
+```
+
+
+```{r}
+linkedin_yearly_new <- linkedin_yearly |>
+  filter(views < 300) |>
+  filter(views > 10)
+```
+
+```{r}
+linkedin_yearly_new |>
+  ggplot(aes(x = follower_count, y = per_applies)) +
+  geom_point()
+```
+
+```{r}
+linkedin_yearly |>
+  filter(follower_count > 10000000)
+```
+
+
+
+
+
+```{r}
+linkedin_yearly |>
+  ggplot(aes(x = views)) + 
+  geom_histogram() + 
+  geom_vline(xintercept = 200)
+```
+
+
+
 ```{r}
 linkedin_yr_rec <- recipe(per_applies ~ job_id + max_salary + follower_count + formatted_experience_level, data = linkedin_train) |> 
   update_role(job_id, new_role = "ID") |> 
