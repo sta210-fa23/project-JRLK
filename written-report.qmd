@@ -60,6 +60,15 @@ linkedin[["tot_benefits"]][is.na(linkedin[["tot_benefits"]])] <- 0
 linkedin$remote_allowed <- as.factor(linkedin$remote_allowed)
 ```
 
+```{r filtering_data}
+linkedin <- linkedin |>
+  filter(follower_count < 100000)
+linkedin <- linkedin |>
+  filter(views > 1)
+linkedin <- linkedin |>
+  filter(views <= 10000)
+```
+
 ```{r pay_period_mutations}
 #| echo: false
 linkedin <- linkedin |>
@@ -73,7 +82,9 @@ linkedin_subset <- linkedin_subset |>
   mutate(if_benefits = factor(ifelse(linkedin_subset$tot_benefits > 0, "listed", "none"),
   levels = c("none", "listed")))
 linkedin_subset <- linkedin_subset |>
-  filter(follower_count < 100000)
+  filter(hourly_max_salary <= 150)
+linkedin_subset <- linkedin_subset |>
+  filter(hourly_max_salary > 10)
 ```
 
 ```{r orig_hour_mutations}
@@ -272,7 +283,7 @@ linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_c
 ```{r recipe_2}
 #| echo: false
 set.seed(2)
-linkedin_recipe2 <- recipe(per_applies ~ job_id + hour_listed + remote_allowed, data = linkedin_train) |>
+linkedin_recipe2 <- recipe(per_applies ~ job_id + hourly_max_salary, data = linkedin_train) |>
   update_role(job_id, new_role = "ID") |> 
   step_dummy(all_nominal_predictors()) |>
   step_zv(all_predictors())
