@@ -9,8 +9,7 @@ execute:
 editor: visual
 ---
 
-```{r}
-#| label: load-pkg-data
+```{r load_pkg_data}
 #| message: false
 #| echo: false
 library(tidyverse)
@@ -34,7 +33,7 @@ benefits <- benefits |>
   clean_names()
 ```
 
-```{r}
+```{r benefits_manipulation}
 #| echo: false
 benefits <- replace(benefits, is.na(benefits), 0)
 benefits$tot_benefits <- rowSums(benefits == 1)
@@ -51,40 +50,72 @@ jobs_employee <- job_postings |>
 #| echo: false
 linkedin <- jobs_employee |>
   left_join(benefits_total, by = join_by("job_id"))
-
 linkedin <- linkedin |> distinct(job_id, .keep_all = TRUE)
+```
+
+```{r replace}
+#| echo: false
+linkedin[["remote_allowed"]][is.na(linkedin[["remote_allowed"]])] <- 0
+linkedin[["tot_benefits"]][is.na(linkedin[["tot_benefits"]])] <- 0
+linkedin$remote_allowed <- as.factor(linkedin$remote_allowed)
 ```
 
 ```{r pay_period_mutations}
 #| echo: false
 linkedin <- linkedin |>
-  mutate(pay_period = recode(pay_period, YEARLY = 1/2080, HOURLY = 1, MONTHLY = 1/160)) |>
-  mutate(hourly_max_salary = pay_period * max_salary) |>
-  mutate(if_benefits = factor(ifelse(linkedin$tot_benefits > 0, "listed", "none"),
-  levels = c("none", "listed")))
-linkedin <- linkedin |>
-  mutate(per_applies = applies/views) 
-```
-
-```{r time_drop_na_mutations}
-#| echo: false
+  mutate(per_applies = applies / views) 
 linkedin_subset <- linkedin |>
-  mutate(original_listed_time = as.POSIXct(original_listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
-  mutate(listed_time = as.POSIXct(listed_time/1000, origin = "1970-01-01", tz = "EST")) |>
-  drop_na(hourly_max_salary) |>
-  drop_na(per_applies) |>
-  drop_na(follower_count) |>
-  drop_na(formatted_experience_level) |>
-  drop_na(remote_allowed) |>
-  drop_na(original_listed_time)
+  drop_na(max_salary) |>
+  drop_na(pay_period) |>
+  mutate(pay_period = recode(pay_period, YEARLY = 2080, HOURLY = 1, MONTHLY = 160)) |>
+  mutate(hourly_max_salary = round((max_salary / pay_period), digits = 2))
+linkedin_subset <- linkedin_subset |>
+  mutate(if_benefits = factor(ifelse(linkedin_subset$tot_benefits > 0, "listed", "none"),
+  levels = c("none", "listed")))
+linkedin_subset <- linkedin_subset |>
+  filter(follower_count < 100000)
 ```
 
 ```{r orig_hour_mutations}
 #| echo: false
+linkedin_subset <- linkedin_subset |>
+  mutate(original_listed_time = as.POSIXct(original_listed_time/1000, 
+                                           origin = "1970-01-01", 
+                                           tz = "EST")) |>
+  mutate(listed_time = as.POSIXct(listed_time/1000, 
+                                  origin = "1970-01-01", 
+                                  tz = "EST")) 
 linkedin_subset$hour_listed <- sapply(strsplit(as.character(linkedin_subset$original_listed_time), ' '), function(x) {
   time_parts <- unlist(strsplit(x[2], ':'))
   return(as.numeric(time_parts[1]))
 })
+```
+
+```{r drop_vars}
+#| echo: false
+linkedin_subset <- subset(linkedin_subset, select = c(job_id,
+                                            formatted_work_type,
+                                            hour_listed,
+                                            formatted_experience_level,
+                                            remote_allowed,
+                                            work_type,
+                                            employee_count,
+                                            follower_count,
+                                            per_applies,
+                                            hourly_max_salary,
+                                            if_benefits))
+linkedin_subset <- linkedin_subset |>
+  drop_na(c(job_id,
+            formatted_work_type,
+            hour_listed,
+            formatted_experience_level,
+            remote_allowed,
+            work_type,
+            employee_count,
+            follower_count,
+            per_applies,
+            hourly_max_salary,
+            if_benefits))
 ```
 
 ## Introduction and data
@@ -131,7 +162,7 @@ hr_hist <- linkedin_subset |>
 (salary_hist + hr_hist) / (follower_hist)
 ```
 
-*Fig 1.1.* The distribution of hourly maximum salary is mostly concentrated when the maximum salary is 0 and 150. It is right skewed and there are apparent outliers, when the maximum salary is above 200.
+*Fig 1.1.* The distribution of hourly maximum salary is mostly concentrated when the maximum hourly salary is between 0 and 150. It is right skewed and there are apparent outliers, when the maximum salary is above 200.
 
 *Fig 1.2.* The distribution of the hour listed is concentrated mainly between hours 15 and 20. This distribution is left skewed and there are outliers between hours 0 and 5.
 
@@ -192,9 +223,9 @@ group |>
 
 *Fig 3.1.* There is a slight linear correlation between follower count of a company and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than 1,000,000 followers, so it would be beneficial to remove outliers that have more followers than that.
 
-*Fig 3.2.* There is a slight positive linear correlation between a job\'s adjusted hourly maximum salary and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than \$200,000 for adjusted hourly max salary, so it would be beneficial to filter out outliers that are above this threshold. Additionally, it would be beneficial to remove the outlier where 100% of viewers applied to the job (per_applies = 1.0)
+*Fig 3.2.* There is a slight positive linear correlation between a job's adjusted hourly maximum salary and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than \$200,000 for adjusted hourly max salary, so it would be beneficial to filter out outliers that are above this threshold. Additionally, it would be beneficial to remove the outlier where 100% of viewers applied to the job (per_applies = 1.0)
 
-*Fig 3.3.* Convert to categorical variable, make a histogram that\'s colored by morning, afternoon, evening
+*Fig 3.3.* Convert to categorical variable, make a histogram that's colored by morning, afternoon, evening
 
 *Fig 3.4.* This figure could be statistically misleading since the intervals are not consistent, and mean_per_applies is not a helpful response variable for the model. We should convert hour_listed to a categorical variable and create a pie chart instead to show the frequency of each level.
 
@@ -225,7 +256,7 @@ linkedin_test <- testing(linkedin_split)
 set.seed(2)
 folds <- vfold_cv(linkedin_train, v = 12)
 linkedin_spec <- linear_reg() |>
-set_engine("lm")
+  set_engine("lm")
 ```
 
 ```{r recipe_1}
@@ -238,12 +269,29 @@ linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_c
   step_zv(all_predictors())
 ```
 
+```{r recipe_2}
+#| echo: false
+set.seed(2)
+linkedin_recipe2 <- recipe(per_applies ~ job_id + hour_listed + remote_allowed, data = linkedin_train) |>
+  update_role(job_id, new_role = "ID") |> 
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+```
+
 ```{r workflow_1}
 #| echo: false
 set.seed(2)
 linkedin_wflow1 <- workflow() |>
-add_recipe(linkedin_recipe1) |>
-add_model(linkedin_spec)
+  add_recipe(linkedin_recipe1) |>
+  add_model(linkedin_spec)
+```
+
+```{r workflow_2}
+#| echo: false
+set.seed(2)
+linkedin_wflow2 <- workflow() |>
+  add_recipe(linkedin_recipe2) |>
+  add_model(linkedin_spec)
 ```
 
 ```{r}
@@ -254,28 +302,54 @@ calc_model_stats <- function(x) {
 }
 ```
 
-```{r resample_mean_stats}
+```{r resampled_fits}
 #| echo: false
 set.seed(2)
-linkedin_fit_rs1 <- linkedin_wflow1 |>
+linkedin_fit_rs_full <- linkedin_wflow1 |>
   fit_resamples(resamples = folds, 
                 control = control_resamples(extract = calc_model_stats))
-collect_metrics(linkedin_fit_rs1, summarize = TRUE)
-map_df(linkedin_fit_rs1$.extracts, ~ .x[[1]][[1]]) |>
+linkedin_fit_rs_red <- linkedin_wflow2 |>
+  fit_resamples(resamples = folds, 
+                control = control_resamples(extract = calc_model_stats))
+```
+
+```{r resample_mean_stats}
+map_df(linkedin_fit_rs_full$.extracts, ~ .x[[1]][[1]]) |>
+  summarise(mean_adj_rsq = mean(adj.r.squared), 
+            mean_aic = mean(AIC), 
+            mean_bic = mean(BIC))
+map_df(linkedin_fit_rs_red$.extracts, ~ .x[[1]][[1]]) |>
   summarise(mean_adj_rsq = mean(adj.r.squared), 
             mean_aic = mean(AIC), 
             mean_bic = mean(BIC))
 ```
 
+
 The adjusted R\^2 value for a model including `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits` was 0.0076. We removed variables one by one, but each model resulted in a lower R\^2 value, indicating that a model including all mentioned variables is the best.
 
-```{r}
-linkedin_fit <- linkedin_wflow1 |>
+```{r red_vs_full_fits}
+linkedin_fit_full <- linkedin_wflow1 |>
   fit(data = linkedin_test)
-linkedin_test_pred <- predict(linkedin_fit, linkedin_test) |>
-  bind_cols(linkedin_test)
-rsq(linkedin_test_pred, truth = per_applies, estimate = .pred)
+
+tidy(linkedin_fit_full) |>
+  kable(digits = 3)
 ```
+
+Using a significance level of $\alpha = 0.10$, `hourly_max_salary`, `follower_count`, and if the job requires internship or director level of experience are the only statistically significant variables, with p-values of 0.093, 0.0183, 0.012, and 0.003 respectively. A smaller model using `hourly_max_salary`, `follower_count`, and `job_experience` was made. 
+
+```{r summarize_test_stats}
+#linkedin_test_pred_full <- predict(linkedin_fit_full, linkedin_train) |>
+  #bind_cols(linkedin_train)
+#map_df(linkedin_fit_full$.extracts, ~ .x[[1]][[1]]) |>
+  #summarise(mean_adj_rsq = mean(adj.r.squared), 
+            #mean_aic = mean(AIC), 
+            #mean_bic = mean(BIC))
+
+#linkedin_test_pred_red <- predict(linkedin_fit_red, linkedin_train) |>
+  #bind_cols(linkedin_train)
+#rsq(linkedin_test_pred_red, truth = per_applies, estimate = .pred)
+```
+
 
 ## Results
 
