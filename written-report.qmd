@@ -60,15 +60,6 @@ linkedin[["tot_benefits"]][is.na(linkedin[["tot_benefits"]])] <- 0
 linkedin$remote_allowed <- as.factor(linkedin$remote_allowed)
 ```
 
-```{r filtering_data}
-linkedin <- linkedin |>
-  filter(follower_count < 100000)
-linkedin <- linkedin |>
-  filter(views > 1)
-linkedin <- linkedin |>
-  filter(views <= 10000)
-```
-
 ```{r pay_period_mutations}
 #| echo: false
 linkedin <- linkedin |>
@@ -81,10 +72,6 @@ linkedin_subset <- linkedin |>
 linkedin_subset <- linkedin_subset |>
   mutate(if_benefits = factor(ifelse(linkedin_subset$tot_benefits > 0, "listed", "none"),
   levels = c("none", "listed")))
-linkedin_subset <- linkedin_subset |>
-  filter(hourly_max_salary <= 150)
-linkedin_subset <- linkedin_subset |>
-  filter(hourly_max_salary > 10)
 ```
 
 ```{r orig_hour_mutations}
@@ -102,6 +89,13 @@ linkedin_subset$hour_listed <- sapply(strsplit(as.character(linkedin_subset$orig
 })
 ```
 
+```{r filtering_data}
+linkedin_subset <- linkedin_subset |> 
+  filter(between(hourly_max_salary, 19.31, 114.04)) |>
+  filter(between(follower_count, 328.15, 3326613.00)) |>
+  filter(views>5)
+```
+
 ```{r drop_vars}
 #| echo: false
 linkedin_subset <- subset(linkedin_subset, select = c(job_id,
@@ -116,6 +110,7 @@ linkedin_subset <- subset(linkedin_subset, select = c(job_id,
                                             hourly_max_salary,
                                             if_benefits))
 linkedin_subset <- linkedin_subset |>
+  filter(formatted_experience_level != "") |>
   drop_na(c(job_id,
             formatted_work_type,
             hour_listed,
@@ -128,6 +123,8 @@ linkedin_subset <- linkedin_subset |>
             hourly_max_salary,
             if_benefits))
 ```
+
+
 
 ## Introduction and data
 
@@ -160,24 +157,43 @@ Another potential interaction effect is the number of views and experience level
 salary_hist <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary)) + 
   geom_histogram() +
-  labs(x = "Hourly Max Salary")
+  labs(x = "Hourly Max Salary",
+       y = "Jobs",
+       title = "Max Salary (Hourly) Distribution")
 follower_hist <- linkedin_subset |>
   ggplot(aes(x = follower_count)) + 
   geom_histogram() +
-  labs(x = "Follower Count")
+  labs(x = "Follower Count",
+       y = "Jobs",
+       title = "Follower Count Distribution")
 hr_hist <- linkedin_subset |>
   ggplot(aes(x = as.numeric(hour_listed))) + 
   geom_histogram() +
-  labs(x = "Hour Listed")
+  labs(x = "Hour Listed",
+       y = "Jobs",
+       title = "Jobs Posted Over Time")
 
 (salary_hist + hr_hist) / (follower_hist)
 ```
+```{r summary statistics}
+sal_quantile<-quantile(linkedin_subset$hourly_max_salary, probs = c(0.05, 0.5, 0.95), na.rm =TRUE)
+follower_quantile<-quantile(linkedin_subset$follower_count, probs = c(0.05, 0.5, 0.95),na.rm =TRUE) 
+views_quantile<-quantile(linkedin_subset$views, probs = c(0.1,0.5, 0.95), na.rm = TRUE)
+```
 
-*Fig 1.1.* The distribution of hourly maximum salary is mostly concentrated when the maximum hourly salary is between 0 and 150. It is right skewed and there are apparent outliers, when the maximum salary is above 200.
 
-*Fig 1.2.* The distribution of the hour listed is concentrated mainly between hours 15 and 20. This distribution is left skewed and there are outliers between hours 0 and 5.
+```{r}
+linkedin_subset_small <- linkedin_subset[, c(3,8,10)]
+summary_stats <- summary(linkedin_subset_small) 
+print(summary_stats)
 
-*Fig 1.3.* The distribution of follower count is also right skewed, with a peak around 0. There are apparent outliers when follower count is greater than 5.0e+06.
+```
+
+*Fig 1.1.* The distribution of hourly maximum salary is right skewed with its median around 50 dollars an hour and an IQR of 33 dollars an hour, demonstrating how the variability it relatively high. The histogram shows the middle 90% of the data to filter out the significant outliers.
+
+*Fig 1.2.* The distribution of the hour listed is left skewed and is concentrated mainly between 2:00 PM and 7:00 PM, with a median around 4:00 PM and an IQR of 4 hours, showing how the variability is relatively high 
+
+*Fig 1.3.* The distribution of follower count is, with a median of around 70 thousand followers. The histogram shows the middle 90% of the data to filter out the significant outliers. The IQR is over 280,000 followers, which means there is high variability. 
 
 ```{r }
 #| echo: false
@@ -193,6 +209,11 @@ experience_plot <- linkedin_subset |>
   facet_wrap(~formatted_experience_level)
 experience_plot 
 ```
+
+```{r}
+tapply(linkedin_subset$per_applies, linkedin_subset$formatted_experience_level, summary)
+```
+
 
 *Fig 2.* The distribution of applications per view based on experience level and maximum salary is mostly concentrated when the applications per view is less than 0.50 and the hourly maximum salary is less than 200 for each experience level. The mid-senior level has apparent outliers when the hourly maximum salary is greater than 200 and the NA level has outliers when the applications per view is above 0.75. There is also not as much data for some of the experience levels, including internship and executive.
 
@@ -283,7 +304,8 @@ linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_c
 ```{r recipe_2}
 #| echo: false
 set.seed(2)
-linkedin_recipe2 <- recipe(per_applies ~ job_id + hourly_max_salary, data = linkedin_train) |>
+linkedin_recipe2 <- recipe(per_applies ~ job_id + follower_count + remote_allowed + formatted_experience_level, 
+                           data = linkedin_train) |>
   update_role(job_id, new_role = "ID") |> 
   step_dummy(all_nominal_predictors()) |>
   step_zv(all_predictors())
@@ -336,7 +358,7 @@ map_df(linkedin_fit_rs_red$.extracts, ~ .x[[1]][[1]]) |>
 ```
 
 
-The adjusted R\^2 value for a model including `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits` was 0.0076. We removed variables one by one, but each model resulted in a lower R\^2 value, indicating that a model including all mentioned variables is the best.
+The adjusted R\^2 value for a model including `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits` was 0.02455995. We removed variables one by one, but each model resulted in a lower R\^2 value, indicating that a model including all mentioned variables is the best.
 
 ```{r red_vs_full_fits}
 linkedin_fit_full <- linkedin_wflow1 |>
@@ -346,7 +368,35 @@ tidy(linkedin_fit_full) |>
   kable(digits = 3)
 ```
 
-Using a significance level of $\alpha = 0.10$, `hourly_max_salary`, `follower_count`, and if the job requires internship or director level of experience are the only statistically significant variables, with p-values of 0.093, 0.0183, 0.012, and 0.003 respectively. A smaller model using `hourly_max_salary`, `follower_count`, and `job_experience` was made. 
+Using a significance level of $\alpha = 0.10$, `follower_count`, `hour_listed`, `remote_allowed`, and if the job requires internship or director level of experience are the only statistically significant variables, with p-values of 0.049, 0.053, 0.020, and 0.012 respectively. A smaller model using `hour_listed`, `follower_count`, `remote_allowed`, and `formatted_experience_level` was made. 
+
+```{r}
+library(rms)
+linkedin_full_fit <- linear_reg() |>
+  set_engine("lm") |>
+  fit(per_applies ~ hourly_max_salary + follower_count + remote_allowed + formatted_experience_level + if_benefits + hour_listed, data = linkedin_subset)
+
+
+vif(linkedin_full_fit$fit)
+```
+Multicollinearity occurs where there are very high correlations among two or more predictor variables, and we need to check for multicollinearity because it causes a loss in precision in our estimates of the regression coefficients. It is a concern when VIF is greater than 10 for a predictor, which is not the case in our model.
+
+Conditions
+
+We need to check linearity, constant variance, normality, and independence as conditions for inference. 
+
+Linearity
+```{r}
+linkedin_full_aug <- augment(linkedin_full_fit$fit)
+```
+
+```{r}
+ggplot(data = linkedin_full_aug, aes(x = .fitted, y = .resid)) +
+  geom_point(alpha = 0.7) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Predicted values", y = "Residuals")
+```
+
 
 ```{r summarize_test_stats}
 #linkedin_test_pred_full <- predict(linkedin_fit_full, linkedin_train) |>
