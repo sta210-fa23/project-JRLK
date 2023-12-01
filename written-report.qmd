@@ -262,6 +262,16 @@ group |>
 *Fig 3.4.* This figure could be statistically misleading since the intervals are not consistent, and mean_per_applies is not a helpful response variable for the model. We should convert hour_listed to a categorical variable and create a pie chart instead to show the frequency of each level.
 
 ## Methodology
+~~
+We are provided with data regarding benefits, where it listed types of benefits provided for each company, and data regarding job postings, which lists the posted jobs scraped from LinkedIn on July 23 and 24, 2023. To prepare our data for our model:
+We counted the total benefits offered by each company to prepare out “if_benefits” predictor. 
+We joined the datasets to use the benefits predictor with other predictors. 
+We made the assumption that if there were NAs for “remote_allowed” and “tot_benefits” for jobs/companies that didn’t allow remote and had no listed benefits. Therefore, we imputed them to 0’s. We filtered out the other values that were NA.
+We created an “hourly_max_salary” predictor variable to compare the salaries even if they were listed as monthly or annually. 
+To use the data relating to the time the job was posted, we converted the time format to EST time and kept only kept the hour.
+To remove significant outliers that may affect the model and its precision, we filtered to keep only the middle 90% of data for the “hourly_max_salary” and “follower_count” variables.
+In order to generalize our results to jobs with not too few views, we filtered out the jobs that had less than 5 views.
+~~
 
 While the bulk of our data was found in the \`job_postings\` data set, we also wanted to include employee count and follower count data in the \`employee\` data set and the type and number of benefits listed on the post found in the \`benefits\` data set. We needed to manipulate the data in 'benefits' to create a useful predictor as the majority of the data was NA, meaning no benefits could be found from the scraped data. To make the data from \`benefits\` a useful predictor, we created a new categorical variable called \`'if_benefits\` where if a benefit (such as paid maternity leave or a 401k plan) was listed on the post, then the post was considered as having benefits \`listed\`, and otherwise was listed as \`none\` listed. We joined all data sets together by \`company_id\`, and saved the data set as \`linkedin\`. 
 
