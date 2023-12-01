@@ -71,7 +71,8 @@ linkedin_subset <- linkedin |>
   mutate(hourly_max_salary = round((max_salary / pay_period), digits = 2))
 linkedin_subset <- linkedin_subset |>
   mutate(if_benefits = factor(ifelse(linkedin_subset$tot_benefits > 0, "listed", "none"),
-  levels = c("none", "listed")))
+  levels = c("none", "listed"))) |>
+  mutate(remote_allowed = if_else(remote_allowed == 1, "yes", "no"))
 ```
 
 ```{r orig_hour_mutations}
@@ -150,7 +151,6 @@ The data dictionary for the variable definitions can be found in the ReadMe for 
 
 -   **`type`**: type of benefit provided (Medical insurance, Dental insurance, 401(k), Paid maternity leave, Disability insurance, Vision insurance, Tuition assistance, Pension plan, Child care support, Commuter benefits, Student loan assistance)
 
-Another potential interaction effect is the number of views and experience level. Different positions are more sought after on LinkedIn over others, depending on viewers' backgrounds. The number of applications increases per number of views for a position requiring associate experience increases at a more rapid rate than those for other positions, although all positions have some sort of impact associated with views and applications.
 
 ```{r numerical_plots}
 #| echo: false
@@ -261,6 +261,8 @@ group |>
 
 *Fig 3.4.* This figure could be statistically misleading since the intervals are not consistent, and mean_per_applies is not a helpful response variable for the model. We should convert hour_listed to a categorical variable and create a pie chart instead to show the frequency of each level.
 
+
+
 ## Methodology
 ~~
 We are provided with data regarding benefits, where it listed types of benefits provided for each company, and data regarding job postings, which lists the posted jobs scraped from LinkedIn on July 23 and 24, 2023. To prepare our data for our model:
@@ -283,6 +285,21 @@ Because the number of views an application gets is directly related to the numbe
 
 Because \`per_applies\` is a numerical variable, a linear regression model would be most appropriate to predict the number of applications per view. As we addressed in the introduction, a person takes into consider many different factors when applying to a job, so our model takes into consideration multiple predictors, including the hour the job was posted, the number of followers the company has, the job experience level, the maximum salary, ability to work remote, and if benefits are listed. 
 
+
+Checking interaction effect:
+```{r}
+linkedin_subset |>
+  ggplot(aes(x = hourly_max_salary, y = per_applies, color = formatted_experience_level)) +
+  geom_point(size = 1) +
+  geom_smooth(method = "lm", formula = y~x, se = F) + 
+  labs(
+    x = "Hourly Max Salary (Dollars)",
+    y = "Percent of Viewers that Applied",
+    title = "Effect of Experience Level and Salary on
+    Percent of Viewers that Applied"
+  )
+```
+
 We split the \`linkedin\` dataset into training and testing data, with 75% of the data in training and 25% in testing. We then used cross-fold validation with 12 folds on the training data set to find the mean summary statistics (AIC,  BIC, Adjusted R-Squared) for each model and compared the different values to find the best possible model. This process was repeated for models containing each combination of predictor variables. We set a seed of (2) when splitting and folding the data to ensure reproducibility.
 
 ```{r split_data}
@@ -301,6 +318,9 @@ linkedin_spec <- linear_reg() |>
   set_engine("lm")
 ```
 
+
+
+
 ```{r recipe_1}
 #| echo: false
 set.seed(2)
@@ -314,11 +334,25 @@ linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_c
 ```{r recipe_2}
 #| echo: false
 set.seed(2)
-linkedin_recipe2 <- recipe(per_applies ~ job_id + follower_count + remote_allowed + formatted_experience_level, 
+linkedin_recipe2 <- recipe(per_applies ~ job_id + remote_allowed + 
+                             formatted_experience_level + hour_listed, 
                            data = linkedin_train) |>
   update_role(job_id, new_role = "ID") |> 
   step_dummy(all_nominal_predictors()) |>
   step_zv(all_predictors())
+```
+
+```{r}
+set.seed(2)
+linkedin_recipe3 <- recipe(per_applies ~ job_id + formatted_experience_level + 
+                             hour_listed + remote_allowed + hourly_max_salary, 
+                           data = linkedin_train) |>
+  step_interact(terms = ~ hourly_max_salary:remote_allowed) |>
+  update_role(job_id, new_role = "ID") |> 
+  step_dummy(all_nominal_predictors()) |>
+  
+  step_zv(all_predictors())
+  
 ```
 
 ```{r workflow_1}
@@ -327,13 +361,13 @@ set.seed(2)
 linkedin_wflow1 <- workflow() |>
   add_recipe(linkedin_recipe1) |>
   add_model(linkedin_spec)
-```
 
-```{r workflow_2}
-#| echo: false
-set.seed(2)
 linkedin_wflow2 <- workflow() |>
   add_recipe(linkedin_recipe2) |>
+  add_model(linkedin_spec)
+
+linkedin_wflow3 <- workflow() |>
+  add_recipe(linkedin_recipe3) |>
   add_model(linkedin_spec)
 ```
 
@@ -354,7 +388,12 @@ linkedin_fit_rs_full <- linkedin_wflow1 |>
 linkedin_fit_rs_red <- linkedin_wflow2 |>
   fit_resamples(resamples = folds, 
                 control = control_resamples(extract = calc_model_stats))
+
+linkedin_fit_rs_red_inter <- linkedin_wflow3 |>
+  fit_resamples(resamples = folds, 
+                control = control_resamples(extract = calc_model_stats))
 ```
+
 
 ```{r resample_mean_stats}
 map_df(linkedin_fit_rs_full$.extracts, ~ .x[[1]][[1]]) |>
@@ -365,10 +404,12 @@ map_df(linkedin_fit_rs_red$.extracts, ~ .x[[1]][[1]]) |>
   summarise(mean_adj_rsq = mean(adj.r.squared), 
             mean_aic = mean(AIC), 
             mean_bic = mean(BIC))
+
+map_df(linkedin_fit_rs_red_inter$.extracts, ~ .x[[1]][[1]]) |>
+  summarise(mean_adj_rsq = mean(adj.r.squared), 
+            mean_aic = mean(AIC), 
+            mean_bic = mean(BIC))
 ```
-
-
-The adjusted R\^2 value for a model including `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits` was 0.02455995. We removed variables one by one, but each model resulted in a lower R\^2 value, indicating that a model including all mentioned variables is the best.
 
 ```{r red_vs_full_fits}
 linkedin_fit_full <- linkedin_wflow1 |>
@@ -378,7 +419,13 @@ tidy(linkedin_fit_full) |>
   kable(digits = 3)
 ```
 
-Using a significance level of $\alpha = 0.10$, `follower_count`, `hour_listed`, `remote_allowed`, and if the job requires internship or director level of experience are the only statistically significant variables, with p-values of 0.049, 0.053, 0.020, and 0.012 respectively. A smaller model using `hour_listed`, `follower_count`, `remote_allowed`, and `formatted_experience_level` was made. 
+The adjusted R\^2 value for a model including `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits` was 0.0246, and the AIC and BIC was -2099.724 and -2036.034, respectively.
+
+Using a significance level of $\alpha = 0.10$, `follower_count`, `hour_listed`, `remote_allowed`, and if the job requires director level of experience are the only statistically significant variables, with p-values of 0.049, 0.053, 0.020, and 0.012 respectively. 
+
+Then, we made a reduced model with these statistically significant variables including `hour_listed`, `follower_count`, `remote_allowed`, and `formatted_experience_level` to compare models. The adjusted R\^2, AIC, and BIC were 0.0241, -2100.996, and -2047.921, respectively. Although the adjusted R-squared is lower for the reduced more, signfiying potentially a worse model, the AIC and BIC were lower than those of the full model, indicating that the reduced model is a stronger model. Since the adjusted R-squared for both models aren't significantly different, we decided that the reduced model would work better because of the lower AIC and BIC. 
+
+Lastly, we included a model with the variables from the reduced model, plus `hourly_max_salary` to explore the potential interaction effect between `hourly_max_salary` and `remote_allowed`, which we identified earlier has a potential interaction term. The adjusted R\^2, AIC, and BIC are 0.0216, -2096.261, and -2037.879. Since this model with the interaction term has a lower adjusted R\^2 and higher AIC and BIC, we concluded that the reduced model with `hour_listed`, `follower_count`, `remote_allowed`, and `formatted_experience_level`as predictors works the best. 
 
 ```{r}
 library(rms)
@@ -389,6 +436,7 @@ linkedin_full_fit <- linear_reg() |>
 
 vif(linkedin_full_fit$fit)
 ```
+
 Multicollinearity occurs where there are very high correlations among two or more predictor variables, and we need to check for multicollinearity because it causes a loss in precision in our estimates of the regression coefficients. It is a concern when VIF is greater than 10 for a predictor, which is not the case in our model.
 
 Conditions
@@ -407,19 +455,6 @@ ggplot(data = linkedin_full_aug, aes(x = .fitted, y = .resid)) +
   labs(x = "Predicted values", y = "Residuals")
 ```
 
-
-```{r summarize_test_stats}
-#linkedin_test_pred_full <- predict(linkedin_fit_full, linkedin_train) |>
-  #bind_cols(linkedin_train)
-#map_df(linkedin_fit_full$.extracts, ~ .x[[1]][[1]]) |>
-  #summarise(mean_adj_rsq = mean(adj.r.squared), 
-            #mean_aic = mean(AIC), 
-            #mean_bic = mean(BIC))
-
-#linkedin_test_pred_red <- predict(linkedin_fit_red, linkedin_train) |>
-  #bind_cols(linkedin_train)
-#rsq(linkedin_test_pred_red, truth = per_applies, estimate = .pred)
-```
 
 
 ## Results
