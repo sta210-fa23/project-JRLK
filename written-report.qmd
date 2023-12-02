@@ -115,7 +115,8 @@ linkedin_subset <- subset(linkedin_subset, select = c(job_id,
                                             follower_count,
                                             per_applies,
                                             hourly_max_salary,
-                                            if_benefits))
+                                            if_benefits,
+                                            hour_listed))
 linkedin_subset <- linkedin_subset |>
   filter(formatted_experience_level != "") |>
   drop_na(c(job_id,
@@ -309,7 +310,8 @@ linkedin_subset |>
   )
 ```
 
-To check for interaction effects, we look at the relationship between two variables when a variable is grouped to see if the perfect of viewers that applied differs based on the experience level of the job posted. Since the lines of best fits are not parallel, there is some indication of an interaction effect, where the experience level potentially has an effect on how salary affects percent of viewers that applied.
+To check for interaction effects, we look at the relationship between two variables when a variable is grouped to see if the perfect of viewers that applied differs based on the experience level of the job posted. Since the lines of best fits are not parallel, there is some indication of an interaction effect, where the experience level potentially has an effect on how salary affects percent of viewers that applied. 
+
 
 We split the \`linkedin\` dataset into training and testing data, with 75% of the data in training and 25% in testing. We then used cross-fold validation with 12 folds on the training data set to find the mean summary statistics (AIC,  BIC, Adjusted R-Squared) for each model and compared the different values to find the best possible model. This process was repeated for models containing each combination of predictor variables. We set a seed of (2) when splitting and folding the data to ensure reproducibility.
 
@@ -334,6 +336,7 @@ linkedin_spec <- linear_reg() |>
 set.seed(2)
 linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_count + remote_allowed + formatted_experience_level + if_benefits + time_posted, data = linkedin_train) |>
   update_role(job_id, new_role = "ID") |> 
+  step_mutate(follower_count = follower_count/1000000) |>
   step_center(hourly_max_salary, follower_count) |>
   step_dummy(all_nominal_predictors()) |>
   step_zv(all_predictors())
@@ -343,9 +346,11 @@ linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_c
 #| echo: false
 set.seed(2)
 linkedin_recipe2 <- recipe(per_applies ~ job_id + remote_allowed + 
-                             formatted_experience_level + hour_listed, 
+                             formatted_experience_level + follower_count,
                            data = linkedin_train) |>
   update_role(job_id, new_role = "ID") |> 
+  step_mutate(follower_count = follower_count/1000000) |>
+  step_center(follower_count) |>
   step_dummy(all_nominal_predictors()) |>
   step_zv(all_predictors())
 ```
@@ -353,10 +358,13 @@ linkedin_recipe2 <- recipe(per_applies ~ job_id + remote_allowed +
 ```{r}
 set.seed(2)
 linkedin_recipe3 <- recipe(per_applies ~ job_id + formatted_experience_level + 
-                             hour_listed + remote_allowed + hourly_max_salary, 
+                             follower_count +
+                            remote_allowed + hourly_max_salary, 
                            data = linkedin_train) |>
   step_interact(terms = ~ hourly_max_salary:remote_allowed) |>
   update_role(job_id, new_role = "ID") |> 
+  step_mutate(follower_count = follower_count/1000000) |>
+  step_center(hourly_max_salary, follower_count) |>
   step_dummy(all_nominal_predictors()) |>
   
   step_zv(all_predictors())
@@ -426,17 +434,22 @@ tidy(linkedin_fit_full) |>
   kable(digits = 3)
 ```
 
-The adjusted R\^2 value for a model including `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits` was 0.0246, and the AIC and BIC was -2099.724 and -2036.034, respectively.
+The adjusted R\^2 value for a model including all predictors, `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits`, is 0.0233, and the AIC and BIC was -2095.867 and -2021.562, respectively.
 
-Using a significance level of $\alpha = 0.10$, `follower_count`, `remote_allowed`, if the job requires director level of experience, and if the job requires executive level of experience are the only statistically significant variables, with p-values of 0.022, about 0, 0.002, and 0.040 respectively.
+Using a significance level of $\alpha = 0.10$, `follower_count`, `remote_allowed`, if the job requires director level of experience, and if the job requires executive level of experience are the only statistically significant variables, with p-values of 0.025, about 0, 0.001, and 0.035 respectively. 
 
-Then, we made a reduced model with these statistically significant variables including `hour_listed`, `follower_count`, `remote_allowed`, and `formatted_experience_level` to compare models. The adjusted R\^2, AIC, and BIC were 0.0241, -2100.996, and -2047.921, respectively. Although the adjusted R-squared is lower for the reduced more, signfiying potentially a worse model, the AIC and BIC were lower than those of the full model, indicating that the reduced model is a stronger model. Since the adjusted R-squared for both models aren't significantly different, we decided that the reduced model would work better because of the lower AIC and BIC.
+Then, we made a reduced model with these statistically significant variables including `follower_count`, `remote_allowed`, and `formatted_experience_level` to compare models. The adjusted R\^2, AIC, and BIC were 0.0237, -2101.431, and -2053.664, respectively. Since this reduced model with less predictors has a higher adjusted R\^2 and lower AIC and BIC, which all indicate a stronger or better model, we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level`as predictors works the better than the full model.
 
-Lastly, we included a model with the variables from the reduced model, plus `hourly_max_salary` to explore the potential interaction effect between `hourly_max_salary` and `remote_allowed`, which we identified earlier has a potential interaction term. The adjusted R\^2, AIC, and BIC are 0.0216, -2096.261, and -2037.879. Since this model with the interaction term has a lower adjusted R\^2 and higher AIC and BIC, we concluded that the reduced model with `hour_listed`, `follower_count`, `remote_allowed`, and `formatted_experience_level`as predictors works the best.
+Lastly, we included a model with the variables from the reduced model, plus `hourly_max_salary` to explore the potential interaction effect between `hourly_max_salary` and `remote_allowed`, which we identified earlier has a potential interaction term. The adjusted R\^2, AIC, and BIC are 0.0238, -2099.576, and -2041.193. Although the adjusted R-squared is higher for the reduced model with the interaction effect, the AIC and BIC were higher than those of the reduced model without the interaction effect, indicating that the reduced model without the interaction term is a stronger model. Since the adjusted R-squared for both models aren't significantly different, we decided that the reduced model without the interaction term would work better because of the lower AIC and BIC.
+
+Overall, by comparing the adjusted R\^2, AIC, and BIC values of each of the models (with all predictors, half as many predictors, and half has many predictors with an interaction term), we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level`as predictors works as the best model.
+
 
 ## Results
 
 CONDITIONS
+
+
 
 ```{r}
 linkedin_red_fit <- linkedin_wflow2 |>
@@ -446,86 +459,15 @@ tidy(linkedin_red_fit) |>
   kable(digits = 3)
 ```
 
-$per\_applies = 0.235 + 0.034(remote\_allowed) - 0.054(Director) - 0.015(Entry\_level)-0.065(Executive)-0.005(Internship)$ $- 0.008(Mid\_Senior\_level) -0.002(hour)$
+$per\_applies = 0.209 + 0.010(follower\_count(millions)) + 0.033(remote\_allowed)$
+$- 0.054(Director) - 0.016(Entry\_level)-0.068(Executive)-0.003(Internship)$
+$- 0.009(Mid\_Senior\_level)$
 
-*Linearity:*
-
-```{r}
-linkedin_full_aug <- augment(linkedin_full_fit$fit)
-ggplot(data = linkedin_full_aug, aes(x = .fitted, y = .resid)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Residuals",
-     title = "Residuals vs. Predicted Values")
-
-r1 <- ggplot(data = linkedin_full_aug, aes(x = .fitted, y = hour_listed)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Hour Listed",
-     title = "Residuals vs. Hour Listed")
-
-r2 <- ggplot(data = linkedin_full_aug, aes(x = .fitted, y = follower_count)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Follower Count",
-     title = "Residuals vs. Follower Count")
-
-r3 <- ggplot(data = linkedin_full_aug, aes(x = .fitted, y = remote_allowed)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Remote Allowed",
-     title = "Residuals vs. Remote")
-
-r4 <- ggplot(data = linkedin_full_aug, aes(x = .fitted, y = formatted_experience_level)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Experience",
-     title = "Residuals vs. Experiences")
-
-r1+r2+r3+r4
-```
-
-Since the plot of the residuals vs. predicted values do not have a discernible pattern and the plots of the residuals vs. each predictor do not have a discernible pattern, linearity is met.
-
-*Constant Variance:*
-
-The vertical spread of the residuals is not constant in the plot of the residuals vs. predicted so the constant variance condition is not satisfied.
-
-*Normality:*
-
-```{r}
-ggplot(data = linkedin_full_aug, aes(x = .resid)) + 
-  geom_histogram() + 
-  labs(title = "Jobs vs Residuals",
-       x = "Residuals")
-```
-
-The distribution of the residuals is unimodal but not symmetric, so the normality condition is not satisfied. However, the sample size is large enough to relax this condition since it is not satisfied.
-
-*Independence:*
-
-```{r}
-ggplot(linkedin_full_aug, aes(y = .resid, x = 1:nrow(linkedin_full_aug))) +
-  geom_line() +
-  geom_point() +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(x = "Order of data collection", 
-       y = "Residuals",
-       title = "Order of data collection vs residuals")
-```
-
-Independence is not satisfied because we are looking at company-related attributes including the company follower count and the postings for different jobs from the same companies may be dependent of each other. Additionally, the dataset spans two days that are months apart so the observations within the same time period are not independent since the new job postings may be dependent from the older ones. However, there is clear pattern in the residuals vs. order of data collection plot.
-
-MULTICOLLINEARITY
 
 ```{r}
 vif(linkedin_red_fit$fit)
 ```
+
 
 Multicollinearity occurs where there are very high correlations among two or more predictor variables, and we need to check for multicollinearity because it causes a loss in precision in our estimates of the regression coefficients. It is a concern when VIF is greater than 10 for a predictor, which is not the case in our model.
 
@@ -545,14 +487,15 @@ rmse_test <- rmse(linkedin_test_pred, truth = per_applies, estimate = .pred)
 bind_rows(rmse_train, rmse_test) |>
   kable(digits = 4)
 ```
+The RMSE of the training data is 0.1189, and the RMSE of the testing data is 0.1193. Significantly lower RMSEs for training data compared to the testing data could be a sign of model overfit, which means that the model fits the training data too well where it doesn't model new unseen data well. However, since the RMSE values for the training and testing data are very close, this shows no evidence of model overfit. 
 
-The RMSE of the training data is 0.1190, and the RMSE of the testing data is 0.1194. Significantly lower RMSEs for training data compared to the testing data could be a sign of model overfit, which means that the model fits the training data too well where it doesn't model new unseen data well. However, since the RMSE values for the training and testing data are very close, this shows no evidence of model overfit.
 
 ```{r}
 glance(linkedin_red_fit)
 ```
 
-Looking at the how the maximum salary, follower count, whether the job allows remote, the experience level, if there were benefits listed, and the hour at which the job was listed all affected the ratio of applications to views, there is no significant relationship between these variables, since the adjusted R\^2 s 0.0589, which is very low. This means that about 6% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables we are studying, indicating no relationship.We tried different combinations of variables to see if there was any relationship between the variables with percent of viewers that applied.
+Looking at the how the follower count, whether the job allows remote, and the listed job experience level affected the ratio of applications to views, there is no significant relationship between these variables, since the adjusted R\^2 s 0.0280, which is very low. This means that less than 3% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables we are studying, indicating no relationship.We tried different combinations of variables to see if there was any relationship between the variables with percent of viewers that applied. 
+
 
 ## Discussion + Conclusion
 
