@@ -173,9 +173,9 @@ follower_hist <- linkedin_subset |>
        y = "Jobs",
        title = "Follower Count Distribution")
 hr_hist <- linkedin_subset |>
-  ggplot(aes(x = as.numeric(hour_listed))) + 
-  geom_histogram(fill = "cornflowerblue") +
-  labs(x = "Hour Listed",
+  ggplot(aes(x = time_posted)) + 
+  geom_bar(fill = "cornflowerblue") +
+  labs(x = "Time of Day Posted",
        y = "Jobs",
        title = "Job Postings Over Time")
 
@@ -202,7 +202,7 @@ summary_stats <- summary(linkedin_subset_small)
 
 *Fig 1.3.* The distribution of follower count is right-skewed with jobs in the data set having a generally lower number of followers.Given the apparent skewness the center is the median of followers of around 70 thousand followers. The IQR describing the spread of the 50% of the distribution is over 280,000 followers, which means the variability of follower count in the data set is relatively high.
 
-```{r }
+```{r out.width="50%"}
 #| echo: false
 experience_plot <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary, y = per_applies, color = formatted_experience_level)) +
@@ -226,7 +226,7 @@ tapply(linkedin_subset$per_applies, linkedin_subset$formatted_experience_level, 
 
 *Fig 2.* There is no apparent direction or shape between the hourly maximum salary and applications per view for each of the experience levels based on the graphs. The correlation between these two variables is around -0.033, indicating the relationship is moderately weak. The distribution of applications per view based on experience level and maximum salary is mostly concentrated when the applications per view is less than 0.50 and the hourly maximum salary is less than 200 for each experience level. The mid-senior level has apparent outliers when the hourly maximum salary is greater than 200 and the NA level has outliers when the applications per view is above 0.75. There is also not as much data for some of the experience levels, including internship and executive.
 
-```{r}
+```{r out.width="50%"}
 #| echo: false
 
 follow_scat <- linkedin_subset |>
@@ -240,27 +240,22 @@ salary_scat <- linkedin_subset |>
   geom_point(size = 0.3, color = "lightskyblue3") +
   labs(x = "Hourly Max Salary", y = "Applications per \nView (%)", title = "Applications per View\nvs. Max Hourly Salary")
 
-hr_scat <- linkedin_subset |>
-  ggplot(aes(x = hour_listed, y = per_applies)) +
-  geom_point(color = "lightskyblue4") +
-  labs(x = "Hour Listed", y = "Applications per \nView (%)", title = "Applications per View based on Hour of Day Listed")
-
-(follow_scat + salary_scat) / hr_scat
+(follow_scat + salary_scat) 
 ```
 
 ```{r}
 #| echo: false
-group <- linkedin_subset |>
-  group_by(hour_listed) |>
-  summarise(mean_per_applies = mean(per_applies))
+#group <- linkedin_subset |>
+#  group_by(hour_listed) |>
+#  summarise(mean_per_applies = mean(per_applies))
 ```
 
 ```{r}
 #| echo: false
-group |>
-  ggplot(aes(x = hour_listed, y = mean_per_applies)) +
-  geom_col(fill = "lightblue3") +
-  labs(x = "Hour Listed (hours since 12 am)", y = "Applications per View (%)", title = "Applications per View based on Hour of Day Listed")
+#group |>
+#  ggplot(aes(x = hour_listed, y = mean_per_applies)) +
+#  geom_col(fill = "lightblue3") +
+#  labs(x = "Hour Listed (hours since 12 am)", y = "Applications per View (%)", title = "Applications per #View based on Hour of Day Listed")
 ```
 
 *Fig 3.1.* There is a slight linear correlation between follower count of a company and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than 1,000,000 followers, so it would be beneficial to remove outliers that have more followers than that.
@@ -302,7 +297,7 @@ Because \`per_applies\` is a numerical variable, a linear regression model would
 
 Checking interaction effect:
 
-```{r}
+```{r out.width="50%"}
 #| echo: false
 linkedin_subset |>
   ggplot(aes(x = hourly_max_salary, y = per_applies, color = formatted_experience_level)) +
@@ -435,7 +430,7 @@ map_df(linkedin_fit_rs_red_inter$.extracts, ~ .x[[1]][[1]]) |>
             mean_bic = mean(BIC))
 ```
 
-```{r red_vs_full_fits}
+```{r out.width="50%"}
 #| echo: false
 linkedin_fit_full <- linkedin_wflow1 |>
   fit(data = linkedin_train)
@@ -456,7 +451,7 @@ Overall, by comparing the adjusted R\^2, AIC, and BIC values of each of the mode
 
 ## Results
 
-```{r}
+```{r out.width="50%"}
 #| echo: false
 linkedin_red_fit <- linkedin_wflow2 |>
   fit(data = linkedin_train)
@@ -469,7 +464,7 @@ $per\_applies = 0.209 + 0.010(follower\_count(millions)) + 0.033(remote\_allowed
 
 *Linearity:*
 
-```{r}
+```{r out.width="50%"}
 #| echo: false
 linkedin_fit_red <- linear_reg() |>
   set_engine("lm") |>
@@ -477,7 +472,7 @@ linkedin_fit_red <- linear_reg() |>
                              formatted_experience_level + follower_count, data = linkedin_train)
 ```
 
-```{r}
+```{r out.width="50%"}
 #| echo: false
 linkedin_red_aug <- augment(linkedin_fit_red$fit)
 r1 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = .resid)) +
@@ -518,7 +513,7 @@ The vertical spread of the residuals is not constant in the plot of the residual
 
 ```{r}
 #| echo: false
-ggplot(data = linkedin_red_aug, aes(x = .resid)) + 
+norm <- ggplot(data = linkedin_red_aug, aes(x = .resid)) + 
   geom_histogram() + 
   labs(title = "Jobs vs Residuals",
        x = "Residuals")
@@ -528,22 +523,29 @@ The distribution of the residuals is unimodal but not symmetric, so the normalit
 
 *Independence:*
 
-```{r}
+```{r out.width="50%"}
 #| echo: false
-ggplot(linkedin_red_aug, aes(y = .resid, x = 1:nrow(linkedin_red_aug))) +
+ind <- ggplot(linkedin_red_aug, aes(y = .resid, x = 1:nrow(linkedin_red_aug))) +
   geom_line() +
   geom_point() +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
   labs(x = "Order of data collection", 
        y = "Residuals",
-       title = "Order of data collection vs residuals")
+       title = "Order of data collection 
+       vs residuals")
 ```
 
 Independence is not satisfied because we are looking at company-related attributes including the company follower count and the postings for different jobs from the same companies may be dependent of each other. Additionally, the dataset spans two days that are months apart so the observations within the same time period are not independent since the new job postings may be dependent from the older ones. However, there is clear pattern in the residuals vs. order of data collection plot.
 
+```{r out.width="50%"}
+#| echo: false
+norm + ind
+```
+
+
 ```{r}
 #| echo: false
-vif(linkedin_fit_red$fit)
+tidy(vif(linkedin_fit_red$fit))
 ```
 
 Multicollinearity occurs where there are very high correlations among two or more predictor variables, and we need to check for multicollinearity because it causes a loss in precision in our estimates of the regression coefficients. It is a concern when VIF is greater than 10 for a predictor, which is not the case in our model.
