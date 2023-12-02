@@ -312,7 +312,7 @@ linkedin_subset |>
   )
 ```
 
-To check for interaction effects, we look at the relationship between two variables when a variable is grouped to see if the perfect of viewers that applied differs based on the experience level of the job posted. Since the lines of best fits are not parallel, there is some indication of an interaction effect, where the experience level potentially has an effect on how salary affects percent of viewers that applied.
+To check for interaction effects, we look at the relationship between two variables when a variable is grouped to see if the percent of viewers that applied differs based on various categorical variables. We saw the potential for an interaction effect between the maximum hourly salary and the required experience level of the candidate for the position, as typically those with less experience are payed less. As seen in the figure below, as the maximum hourly salary increases, the percentage of applicants out of viewers increases at different rates between different levels of experience required. We also saw the potential for interaction effects between hourly maximum salary and if remote work was allowed; however, the best fit lines for there being no remote work and remote work parallel, indicating no potential relationship.
 
 We split the \`linkedin\` dataset into training and testing data, with 75% of the data in training and 25% in testing. We then used cross-fold validation with 12 folds on the training data set to find the mean summary statistics (AIC,  BIC, Adjusted R-Squared) for each model and compared the different values to find the best possible model. This process was repeated for models containing each combination of predictor variables. We set a seed of (2) when splitting and folding the data to ensure reproducibility.
 
@@ -423,14 +423,13 @@ map_df(linkedin_fit_rs_red$.extracts, ~ .x[[1]][[1]]) |>
   summarise(mean_adj_rsq = mean(adj.r.squared), 
             mean_aic = mean(AIC), 
             mean_bic = mean(BIC))
-
 map_df(linkedin_fit_rs_red_inter$.extracts, ~ .x[[1]][[1]]) |>
   summarise(mean_adj_rsq = mean(adj.r.squared), 
             mean_aic = mean(AIC), 
             mean_bic = mean(BIC))
 ```
 
-```{r out.width="50%"}
+```{r out.width = "50%"}
 #| echo: false
 linkedin_fit_full <- linkedin_wflow1 |>
   fit(data = linkedin_train)
@@ -439,15 +438,15 @@ tidy(linkedin_fit_full) |>
   kable(digits = 3)
 ```
 
-The adjusted R\^2 value for a model including all predictors, `hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits`, is 0.0233, and the AIC and BIC was -2095.867 and -2021.562, respectively.
+The adjusted $R^2$ value for a model including all predictors (`hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits`) is 0.0233, and the AIC and BIC was -2095.867 and -2021.562, respectively.
 
 Using a significance level of $\alpha = 0.10$, `follower_count`, `remote_allowed`, if the job requires director level of experience, and if the job requires executive level of experience are the only statistically significant variables, with p-values of 0.025, about 0, 0.001, and 0.035 respectively.
 
-Then, we made a reduced model with these statistically significant variables including `follower_count`, `remote_allowed`, and `formatted_experience_level` to compare models. The adjusted R\^2, AIC, and BIC were 0.0237, -2101.431, and -2053.664, respectively. Since this reduced model with less predictors has a higher adjusted R\^2 and lower AIC and BIC, which all indicate a stronger or better model, we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level`as predictors works the better than the full model.
+Then, we made a reduced model with these statistically significant variables including `follower_count`, `remote_allowed`, and `formatted_experience_level` to compare models. The adjusted R\^2, AIC, and BIC were 0.0237, -2101.431, and -2053.664, respectively. Since this reduced model with less predictors has a higher adjusted $R^2$ and lower AIC and BIC, which all indicate a stronger or better model, we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level`as predictors works the better than the full model.
 
-Lastly, we included a model with the variables from the reduced model, plus `hourly_max_salary` to explore the potential interaction effect between `hourly_max_salary` and `remote_allowed`, which we identified earlier has a potential interaction term. The adjusted R\^2, AIC, and BIC are 0.0238, -2099.576, and -2041.193. Although the adjusted R-squared is higher for the reduced model with the interaction effect, the AIC and BIC were higher than those of the reduced model without the interaction effect, indicating that the reduced model without the interaction term is a stronger model. Since the adjusted R-squared for both models aren't significantly different, we decided that the reduced model without the interaction term would work better because of the lower AIC and BIC.
+Lastly, we included a model with the variables from the reduced model, plus `hourly_max_salary` to explore the potential interaction effect between `hourly_max_salary` and `remote_allowed`, which we identified earlier has a potential interaction term. The adjusted $R^2$, AIC, and BIC are 0.0238, -2099.576, and -2041.193. Although the adjusted $R^2$ is higher for the reduced model with the interaction effect, the AIC and BIC were higher than those of the reduced model without the interaction effect, indicating that the reduced model without the interaction term is a stronger model. Since the adjusted $R^2$ for both models aren't significantly different, we decided that the reduced model without the interaction term would work better because of the lower AIC and BIC.
 
-Overall, by comparing the adjusted R\^2, AIC, and BIC values of each of the models (with all predictors, half as many predictors, and half has many predictors with an interaction term), we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level`as predictors works as the best model.
+Overall, by comparing the adjusted $R^2$, AIC, and BIC values of each of the models (with all predictors, statistically significant predictors, and statistically significant predictors with an interaction effect), we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level` as predictors works as the best model.
 
 ## Results
 
@@ -542,13 +541,12 @@ Independence is not satisfied because we are looking at company-related attribut
 norm + ind
 ```
 
-
 ```{r}
 #| echo: false
 tidy(vif(linkedin_fit_red$fit))
 ```
 
-Multicollinearity occurs where there are very high correlations among two or more predictor variables, and we need to check for multicollinearity because it causes a loss in precision in our estimates of the regression coefficients. It is a concern when VIF is greater than 10 for a predictor, which is not the case in our model.
+Multicollinearity occurs where there are very high correlations among two or more predictor variables, and we need to check for multicollinearity because it causes a loss in precision in our estimates of the regression coefficients. All VIF values are less than 10, meaning multicolinearity is not a concern.
 
 ```{r}
 #| echo: false
@@ -573,17 +571,23 @@ The RMSE of the training data is 0.1189, and the RMSE of the testing data is 0.1
 
 ```{r}
 #| echo: false
-glance(linkedin_red_fit)
+stats <- glance(linkedin_red_fit) |>
+ select(r.squared, adj.r.squared, AIC, BIC)
+colnames(stats) <- c("R Squared", "Adj. R Squared", "AIC","BIC")
+stats |>
+ kable(digits = 3)
 ```
 
-Looking at the how the follower count, whether the job allows remote, and the listed job experience level affected the ratio of applications to views, there is no significant relationship between these variables, since the adjusted R\^2 s 0.0280, which is very low. This means that less than 3% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables we are studying, indicating no relationship.We tried different combinations of variables to see if there was any relationship between the variables with percent of viewers that applied.
+The low \$R\^2\$ value of 0.0280 suggests there is no significant relationship between the follower count, whether the job allows remote work, and the listed job experience level and the ratio of applications to views. Only 2.8% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables: the follower count, whether the job allows remote, and the listed job experience level.
 
 ## Discussion + Conclusion
 
-While we had expected the percent of viewers that applied for each job to increase as the maximum salary and number of followers increase, our model and EDA have demonstrated how there is no relationship between these variables, along with having a remote option, the job experience level, the hour at which it was posted, and if the benefits were posted, and our response variable of the percent of viewers who applied.
+Our final model suggests that there is no statistically significant relationship between our response variable of the percent of viewers who applied and the maximum salary, number of followers, having a remote option, the job experience level, the hour at which it was posted, and if the benefits were posted. Our model suggests that the percentage of viewers who applied and the maximum salary, number of followers, having a remote option, the job experience level, the hour at which it was posted, and if the benefits were posted are not useful predictors and therefore do not provide much insight into what makes a LinkedIn post have significant popularity.
 
-Some of the limitations with our analysis may include assumption errors with the number of hours the job would work for the jobs listed as yearly and monthly, the filtering of outliers and deciding the thresholds for outliers, model complexity where we are fitting many predictor variables, and the lack of data considering how long the jobs were listed.
+Some of the limitations of our analysis may be our treatment of NA data in creating \`if_benefits\` and \`remote_allowed\`. We assumed that since the data had not been included, it was not available in the post, and therefore the values could be inputted as 0. Another possible limitation is that we chose to normalize the maximum salaries across hourly, monthly, and yearly pay periods to create \`hourly_max_salary", and to do so needed to make assumptions about how often individuals would work. These assumptions could have been incorrect and thus impacted the accuracy of our final model.
 
-Some ways our analysis could be improved would be filtering out the outliers better, deciding the thresholds for views, follower count, salaries, etc, that would avoid skewing the data.
+Our limitation is also limited to the data that was scraped and gathered in the data set we used. Other possible influences to the percentage of applicants that was not scraped could be the number of shares the post received, the duration of the post, and if the location as if it was rural or not. There are also a lot of other less quantifiable variables that go into applying to a job, such as company culture and the company's mission statement, as well as societal influences such as current unemployment rates. To improve the prediction of the number of applicants as a percentage of viewers, we might have to consider a wider range of variables that were not available in the data sets we used in this project.
 
-Potential issues relating to the data would include the time scraped from LinkedIn, since many of the original listed times and the listed times (the time it was scraped) is exactly the same, which is not meaningful in determining the number of applications over a certain amount of time.
+Some ways our analysis could be improved would be filtering out the outliers with a more precise method, such as limiting the views and applications to a certain range.
+
+Potential issues relating to the data would include the time scraped from LinkedIn, since many of the original listed times and the listed times (the time it was scraped) are exactly the same, which is not meaningful in determining the number of applications over a certain amount of time. There were also many missing values in our data set which were filtered out, but there could be a skew in the remaining data that influenced our results.
