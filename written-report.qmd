@@ -227,17 +227,17 @@ follow_scat <- linkedin_subset |>
   filter(follower_count > 10000) |>
   ggplot(aes(x = follower_count, y = per_applies)) +
   geom_point(size = 0.3, color = "lightblue4") +
-  labs(x = "Follower Count", y = "Applications per View (%)", title = "Fig 3.1 Applications per View based on Company Page Follower Count")
+  labs(x = "Follower Count", y = "Applications per \nView (%)", title = "Fig 3.1 Applications per View based on Company Page Follower Count")
 
 salary_scat <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary, y = per_applies)) +
   geom_point(size = 0.3, color = "lightskyblue3") +
-  labs(x = "Hourly Max Salary", y = "Applications per View (%)", title = "Fig 3.2 Applications per View based on Maximum Hourly Salary")
+  labs(x = "Hourly Max Salary", y = "Applications per \nView (%)", title = "Fig 3.2 Applications per View based on Maximum Hourly Salary")
 
 hr_scat <- linkedin_subset |>
   ggplot(aes(x = hour_listed, y = per_applies)) +
   geom_point(color = "lightskyblue4") +
-  labs(x = "Hour Listed", y = "Applications per View (%)", title = "Fig 3.3 Applications per View based on Hour of Day Listed")
+  labs(x = "Hour Listed", y = "Applications per \nView (%)", title = "Fig 3.3 Applications per View based on Hour of Day Listed")
 
 (follow_scat + salary_scat) / hr_scat
 ```
