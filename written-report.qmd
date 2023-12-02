@@ -129,8 +129,10 @@ linkedin_subset <- linkedin_subset |>
             follower_count,
             per_applies,
             hourly_max_salary,
-            if_benefits))
+            if_benefits,
+            hour_listed))
 ```
+
 
 ## Introduction and data
 
@@ -247,7 +249,7 @@ hr_scat <- linkedin_subset |>
 #| echo: false
 group <- linkedin_subset |>
   group_by(hour_listed) |>
-  summarize(mean_per_applies = mean(per_applies))
+  summarise(mean_per_applies = mean(per_applies))
 ```
 
 ```{r}
@@ -446,11 +448,6 @@ Overall, by comparing the adjusted R\^2, AIC, and BIC values of each of the mode
 
 
 ## Results
-
-CONDITIONS
-
-
-
 ```{r}
 linkedin_red_fit <- linkedin_wflow2 |>
   fit(data = linkedin_train)
@@ -463,9 +460,81 @@ $per\_applies = 0.209 + 0.010(follower\_count(millions)) + 0.033(remote\_allowed
 $- 0.054(Director) - 0.016(Entry\_level)-0.068(Executive)-0.003(Internship)$
 $- 0.009(Mid\_Senior\_level)$
 
+*Linearity:*
 
 ```{r}
-vif(linkedin_red_fit$fit)
+linkedin_fit_red <- linear_reg() |>
+  set_engine("lm") |>
+  fit(per_applies ~ job_id + remote_allowed + 
+                             formatted_experience_level + follower_count, data = linkedin_train)
+```
+
+
+```{r}
+linkedin_red_aug <- augment(linkedin_fit_red$fit)
+ggplot(data = linkedin_red_aug, aes(x = .fitted, y = .resid)) +
+geom_point(alpha = 0.7) +
+geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+labs(x = "Predicted values", 
+     y = "Residuals",
+     title = "Residuals vs. Predicted Values")
+r2 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = follower_count)) +
+geom_point(alpha = 0.7) +
+geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+labs(x = "Predicted values", 
+     y = "Follower Count",
+     title = "Residuals vs. Follower Count")
+r3 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = remote_allowed)) +
+geom_point(alpha = 0.7) +
+geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+labs(x = "Predicted values", 
+     y = "Remote Allowed",
+     title = "Residuals vs. Remote")
+r4 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = formatted_experience_level)) +
+geom_point(alpha = 0.7) +
+geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+labs(x = "Predicted values", 
+     y = "Experience",
+     title = "Residuals vs. Experiences")
+r2+r3+r4
+```
+
+Since the plot of the residuals vs. predicted values do not have a discernible pattern and the plots of the residuals vs. each predictor do not have a discernible pattern, linearity is met.
+
+*Constant Variance:*
+
+The vertical spread of the residuals is not constant in the plot of the residuals vs. predicted so the constant variance condition is not satisfied.
+
+*Normality:*
+
+```{r}
+ggplot(data = linkedin_red_aug, aes(x = .resid)) + 
+  geom_histogram() + 
+  labs(title = "Jobs vs Residuals",
+       x = "Residuals")
+```
+
+The distribution of the residuals is unimodal but not symmetric, so the normality condition is not satisfied. However, the sample size is large enough to relax this condition since it is not satisfied.
+
+*Independence:*
+
+```{r}
+ggplot(linkedin_red_aug, aes(y = .resid, x = 1:nrow(linkedin_red_aug))) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Order of data collection", 
+       y = "Residuals",
+       title = "Order of data collection vs residuals")
+```
+
+Independence is not satisfied because we are looking at company-related attributes including the company follower count and the postings for different jobs from the same companies may be dependent of each other. Additionally, the dataset spans two days that are months apart so the observations within the same time period are not independent since the new job postings may be dependent from the older ones. However, there is clear pattern in the residuals vs. order of data collection plot.
+
+
+
+
+```{r}
+vif(linkedin_fit_red$fit)
 ```
 
 
@@ -495,6 +564,7 @@ glance(linkedin_red_fit)
 ```
 
 Looking at the how the follower count, whether the job allows remote, and the listed job experience level affected the ratio of applications to views, there is no significant relationship between these variables, since the adjusted R\^2 s 0.0280, which is very low. This means that less than 3% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables we are studying, indicating no relationship.We tried different combinations of variables to see if there was any relationship between the variables with percent of viewers that applied. 
+
 
 
 ## Discussion + Conclusion
