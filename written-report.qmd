@@ -296,8 +296,8 @@ linkedin_subset |>
     Percent of Viewers that Applied"
   )
 ```
+To check for interaction effects, we look at the relationship between two variables when a variable is grouped to see if the perfect of viewers that applied differs based on the experience level of the job posted. Since the lines of best fits are not parallel, there is some indication of an interaction effect, where the experience level potentially has an effect on how salary affects percent of viewers that applied. 
 
-ADD INTERACTION STUFF
 
 We split the \`linkedin\` dataset into training and testing data, with 75% of the data in training and 25% in testing. We then used cross-fold validation with 12 folds on the training data set to find the mean summary statistics (AIC,  BIC, Adjusted R-Squared) for each model and compared the different values to find the best possible model. This process was repeated for models containing each combination of predictor variables. We set a seed of (2) when splitting and folding the data to ensure reproducibility.
 
