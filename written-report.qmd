@@ -417,15 +417,18 @@ linkedin_fit_rs_red_inter <- linkedin_wflow3 |>
 map_df(linkedin_fit_rs_full$.extracts, ~ .x[[1]][[1]]) |>
   summarise(mean_adj_rsq = mean(adj.r.squared), 
             mean_aic = mean(AIC), 
-            mean_bic = mean(BIC))
+            mean_bic = mean(BIC)) |> 
+  kable(digits = 3)
 map_df(linkedin_fit_rs_red$.extracts, ~ .x[[1]][[1]]) |>
   summarise(mean_adj_rsq = mean(adj.r.squared), 
             mean_aic = mean(AIC), 
-            mean_bic = mean(BIC))
+            mean_bic = mean(BIC)) |> 
+  kable(digits = 3)
 map_df(linkedin_fit_rs_red_inter$.extracts, ~ .x[[1]][[1]]) |>
   summarise(mean_adj_rsq = mean(adj.r.squared), 
             mean_aic = mean(AIC), 
-            mean_bic = mean(BIC))
+            mean_bic = mean(BIC)) |> 
+  kable(digits = 3)
 ```
 
 ```{r out.width = "50%"}
