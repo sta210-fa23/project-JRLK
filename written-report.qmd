@@ -363,14 +363,13 @@ linkedin_recipe3 <- recipe(per_applies ~ job_id + formatted_experience_level +
                              follower_count +
                             remote_allowed + hourly_max_salary, 
                            data = linkedin_train) |>
-  step_interact(terms = ~ hourly_max_salary:remote_allowed) |>
+  step_string2factor(formatted_experience_level) |>
+  step_interact(terms = ~ hourly_max_salary:formatted_experience_level) |>
   update_role(job_id, new_role = "ID") |> 
   step_mutate(follower_count = follower_count/1000000) |>
   step_center(hourly_max_salary, follower_count) |>
   step_dummy(all_nominal_predictors()) |>
-  
   step_zv(all_predictors())
-  
 ```
 
 ```{r workflow_1}
