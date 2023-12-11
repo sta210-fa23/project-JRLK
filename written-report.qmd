@@ -101,7 +101,9 @@ linkedin_subset <- linkedin_subset |>
 linkedin_subset <- linkedin_subset |> 
   filter(between(hourly_max_salary, 19.31, 114.04)) |>
   filter(between(follower_count, 328.15, 3326613.00)) |>
-  filter(views>5)
+  filter(views>5) |>
+  filter(time_posted != "morning") |>
+  filter(time_posted != "night")
 ```
 
 ```{r drop_vars}
@@ -135,9 +137,11 @@ linkedin_subset <- linkedin_subset |>
 ```
 
 ```{r}
+#| echo: false
 random_rows<- sample(1:nrow(linkedin_subset), 1500)
 linkedin_subset <- linkedin_subset[random_rows,]
 ```
+
 
 ## Introduction and data
 
@@ -497,8 +501,6 @@ Since the plot of the residuals vs. predicted values do not have a discernible p
 
 The vertical spread of the residuals is not constant in the plot of the residuals vs. predicted so the constant variance condition is not satisfied.
 
-**Normality:**
-
 ```{r}
 #| echo: false
 norm <- ggplot(data = linkedin_red_aug, aes(x = .resid)) + 
@@ -507,9 +509,6 @@ norm <- ggplot(data = linkedin_red_aug, aes(x = .resid)) +
        x = "Residuals")
 ```
 
-The distribution of the residuals is unimodal but not symmetric, so the normality condition is not satisfied. However, the sample size is large enough to relax this condition since it is not satisfied.
-
-**Independence:**
 
 ```{r out.width="50%"}
 #| echo: false
@@ -523,12 +522,19 @@ ind <- ggplot(linkedin_red_aug, aes(y = .resid, x = 1:nrow(linkedin_red_aug))) +
        vs residuals")
 ```
 
-Independence is not satisfied because we are looking at company-related attributes including the company follower count and the postings for different jobs from the same companies may be dependent of each other. Additionally, the dataset spans two days that are months apart so the observations within the same time period are not independent since the new job postings may be dependent from the older ones. However, there is clear pattern in the residuals vs. order of data collection plot.
-
 ```{r out.width="50%"}
 #| echo: false
 norm + ind
 ```
+
+
+**Normality:**
+
+Based on "Jobs vs Residuals," the distribution of the residuals is unimodal but not symmetric, so the normality condition is not satisfied. However, the sample size is large enough to relax this condition since it is not satisfied.
+
+**Independence:**
+
+Although there there were some jobs posted from the same company, which may influence independence within jobs, we took a random sample of the jobs to address this issue. Based on "Order of data collection vs residuals," there is clear pattern in the residuals vs. order of data collection plot, so independence condition appears to be satisfied, as far as we can evaluate it. 
 
 ```{r}
 #| echo: false
