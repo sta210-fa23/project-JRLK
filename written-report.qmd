@@ -158,7 +158,7 @@ The data dictionary for the variable definitions can be found in the ReadMe for 
 
 -   **`type`**: type of benefit provided (Medical insurance, Dental insurance, 401(k), Paid maternity leave, Disability insurance, Vision insurance, Tuition assistance, Pension plan, Child care support, Commuter benefits, Student loan assistance)
 
-```{r numerical_plots}
+```{r numerical_plots, out.width="50%"}
 #| echo: false
 salary_hist <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary)) + 
@@ -215,6 +215,12 @@ experience_plot <- linkedin_subset |>
   facet_wrap(~formatted_experience_level) +
   guides(color = FALSE) 
 experience_plot 
+
+```
+
+```{r}
+#| echo: false
+#| results: false
 cor(linkedin_subset$hourly_max_salary, linkedin_subset$per_applies)
 ```
 
@@ -261,10 +267,6 @@ salary_scat <- linkedin_subset |>
 *Fig 3.1.* There is a slight linear correlation between follower count of a company and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than 1,000,000 followers, so it would be beneficial to remove outliers that have more followers than that.
 
 *Fig 3.2.* There is a slight positive linear correlation between a job's adjusted hourly maximum salary and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than \$200,000 for adjusted hourly max salary, so it would be beneficial to filter out outliers that are above this threshold. Additionally, it would be beneficial to remove the outlier where 100% of viewers applied to the job (per_applies = 1.0)
-
-*Fig 3.3.* Convert to categorical variable, make a histogram that's colored by morning, afternoon, evening
-
-*Fig 3.4.* This figure could be statistically misleading since the intervals are not consistent, and mean_per_applies is not a helpful response variable for the model. We should convert hour_listed to a categorical variable and create a pie chart instead to show the frequency of each level.
 
 ## Methodology
 
@@ -477,31 +479,31 @@ linkedin_fit_red <- linear_reg() |>
 #| echo: false
 linkedin_red_aug <- augment(linkedin_fit_red$fit)
 r1 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = .resid)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Residuals",
-     title = "Residuals vs.\nPredicted Values")
-r2 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = follower_count)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Follower Count",
-     title = "Residuals vs.\nFollower Count")
-r3 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = remote_allowed)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Remote Allowed",
-     title = "Residuals vs.\nRemote")
-r4 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = formatted_experience_level)) +
-geom_point(alpha = 0.7) +
-geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-labs(x = "Predicted values", 
-     y = "Experience",
-     title = "Residuals vs.\nExperiences")
-r1+r2
-r3+r4
+      geom_point(alpha = 0.7) +
+      geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+      labs(x = "Predicted values", 
+           y = "Residuals",
+           title = "Residuals vs.\nPredicted Values")
+r2 <- ggplot(data = linkedin_red_aug, aes(x = follower_count, y = .resid)) +
+      geom_point(alpha = 0.7) +
+      geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+      labs(x = "Predicted values", 
+           y = "Follower Count",
+           title = "Residuals vs.\nFollower Count")
+r3 <- ggplot(data = linkedin_red_aug, aes(x = remote_allowed, y = .resid)) +
+      geom_point(alpha = 0.7) +
+      geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+      labs(x = "Predicted values", 
+           y = "Remote Allowed",
+           title = "Residuals vs. Remote")
+r4 <- ggplot(data = linkedin_red_aug, aes(x = formatted_experience_level, y = .resid)) +
+      geom_point(alpha = 0.7) +
+      geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+      labs(x = "Predicted values", 
+           y = "Experience",
+           title = "Residuals vs. Experiences") +
+      theme(axis.text.x = element_text(angle = 25, hjust=1))
+r1+r2+r3+r4
 ```
 
 Since the plot of the residuals vs. predicted values do not have a discernible pattern and the plots of the residuals vs. each predictor do not have a discernible pattern, linearity is met.
@@ -545,7 +547,8 @@ norm + ind
 
 ```{r}
 #| echo: false
-tidy(vif(linkedin_fit_red$fit))
+tidy(vif(linkedin_fit_red$fit)) |>
+  kable(digits = 3)
 ```
 
 Multicollinearity occurs where there are very high correlations among two or more predictor variables, and we need to check for multicollinearity because it causes a loss in precision in our estimates of the regression coefficients. All VIF values are less than 10, meaning multicolinearity is not a concern.
