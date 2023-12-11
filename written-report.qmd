@@ -261,11 +261,11 @@ salary_scat <- linkedin_subset |>
 **Joining Datasets**\
 While most of our data is from the \`job_postings\` data set, we also wanted to include employee and follower count from the \`employee\` data set, and the type and number of benefits listed from the \`benefits\` data set. We joined all data sets together by \`company_id\`, and saved the data set as \`linkedin\`.
 
-**Benefits**\
-Then, we added the number of benefits to create a new "tot_benefits" predictor, which tells us the total number of benefits listed. If "remote_allowed" and "tot_benefits" had NA entries, we assumed the job did not allow remote work and did not list any benefits. Consequently, we imputed them to 0's. However, the majority of entries in 'benefits' are NA, which means no benefits were scraped from the listing. To make data from \`benefits\` a useful predictor, we created a new categorical variable\`'if_benefits\`, which tells us if any or no benefits are listed. If any benefits (i.e. paid maternity leave or 401k plan) were listed, then the post is considered \`listed\`, and otherwise considered \`none\`.
+**Benefits\
+**Then, we added the number of benefits to create a new "tot_benefits" predictor, which tells us the total number of benefits listed. If "remote_allowed" and "tot_benefits" had NA entries, we assumed the job did not allow remote work and did not list any benefits. Consequently, we imputed them to 0's. However, the majority of entries in 'benefits' are NA, which means no benefits were scraped from the listing. To make data from \`benefits\` a useful predictor, we created a new categorical variable\`'if_benefits\`, which tells us if any or no benefits are listed. If any benefits (i.e. paid maternity leave or 401k plan) were listed, then the post is considered \`listed\`, and otherwise considered \`none\`.
 
-**Salary**\
-We also made assumptions about other variables to normalize predictor variables. To compare salaries even if they were listed in different formats (such as hourly pay, monthly, or yearly salary), we normalized the variable using the categorical variable \`pay_period\`, which tells us if the job pays its worker the \`max_salary\` or \`min_salary\` amount, with hourly, monthly, and annual payments. We then calculated the hourly wage given the maximum pay for hourly, monthly, and yearly pay periods. We assumed 160 hours for the monthly payments (40 hour work week for 4 weeks), and 2080 hours for the annual payments (40 hour work week for 52 weeks). Then, we saved the new data in a variable called \`hourly_max_salary\`.
+**Salary\
+**We also made assumptions about other variables to normalize predictor variables. To compare salaries even if they were listed in different formats (such as hourly pay, monthly, or yearly salary), we normalized the variable using the categorical variable \`pay_period\`, which tells us if the job pays its worker the \`max_salary\` or \`min_salary\` amount, with hourly, monthly, and annual payments. We then calculated the hourly wage given the maximum pay for hourly, monthly, and yearly pay periods. We assumed 160 hours for the monthly payments (40 hour work week for 4 weeks), and 2080 hours for the annual payments (40 hour work week for 52 weeks). Then, we saved the new data in a variable called \`hourly_max_salary\`.
 
 **Time Posted**\
 Since the existing posted time is in different time zones, we converted the time format to EST time and only kept the hour. Then, we converted posted time from a quantitative variable to a categorical variable. Since it wouldn't make sense to have 24 different levels, we designated 4 levels: night (0 am - 5 am), morning (6 am - 11 am), afternoon (12 pm - 5 pm), and evening (6 pm - 11 pm).
@@ -273,11 +273,11 @@ Since the existing posted time is in different time zones, we converted the time
 **Drop NA**\
 We dropped all \`NA\` values for all predictors we wanted to observe so we can keep our dataset consistent when testing different models. Specifically, we dropped NAs for \`hourly_max_salary\`, \`per_applies\`, \`follower_count\`, \`formatted_experience_level\`, \`original_listed_time\`, and \`remote_allowed\`.\
 \
-**Filtering**\
-To remove significant outliers that may affect the model's precision, we filtered and only kept the middle 90% of the data for the "hourly_max_salary" and "follower_count" variables. To generalize our results to job listings with a reasonable number of views, we filtered out job listings with less than 5 views.
+**Filtering\
+**To remove significant outliers that may affect the model's precision, we filtered and only kept the middle 90% of the data for the "hourly_max_salary" and "follower_count" variables. To generalize our results to job listings with a reasonable number of views, we filtered out job listings with less than 5 views.
 
-**Normalize Response Variable**\
-Because each job has been listed for varying time durations, and its view count is directly related to its application count, we decided to normalize the application count with the view count. To do so, we created a new variable \`per_applies\`, which divides \`applications\` by \`views\`. We now use \`per_applies\` as our response variable.
+**Normalize Response Variable\
+**Because each job has been listed for varying time durations, and its view count is directly related to its application count, we decided to normalize the application count with the view count. To do so, we created a new variable \`per_applies\`, which divides \`applications\` by \`views\`. We now use \`per_applies\` as our response variable.
 
 **Model Type**\
 Because \`per_applies\` is a numerical variable, a linear regression model would be most appropriate to predict the number of applications per view. As we addressed in the introduction, a person takes into consider many factors when applying to a job, so our model takes into consideration multiple predictors, including the hour of day posted, company follower count, experience level, maximum salary, ability to work remote, and if benefits are listed.
@@ -450,7 +450,7 @@ tidy(linkedin_red_fit) |>
 
 $per\_applies = 0.209 + 0.010(follower\_count(millions)) + 0.033(remote\_allowed)$ $- 0.054(Director) - 0.016(Entry\_level)-0.068(Executive)-0.003(Internship)$ $- 0.009(Mid\_Senior\_level)$
 
-*Linearity:*
+**Linearity:**
 
 ```{r out.width="50%"}
 #| echo: false
