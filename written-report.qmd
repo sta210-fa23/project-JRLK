@@ -142,7 +142,6 @@ random_rows<- sample(1:nrow(linkedin_subset), 1500)
 linkedin_subset <- linkedin_subset[random_rows,]
 ```
 
-
 ## Introduction and data
 
 LinkedIn is a popular platform that connects companies and professionals spanning various levels of experience, and there are thousands of active job postings available on LinkedIn. Moreover, online job search services and platforms are now considered equally important for people to access a wide variety of opportunities compared to in-person job postings. With the sheer amount of postings, applicants may be overwhelmed by the vast amount of postings, and are less likely to come across some postings over others. Our primary research question is - what variables about job postings increase popularity among applicants?
@@ -202,15 +201,17 @@ summary_stats <- summary(linkedin_subset_small)
 
 **Fig 1.1.** The distribution of hourly maximum salary is right-skewed with jobs in the data set having a generally lower hourly maximum salary. Given the apparent skewness the center is the median hourly maximum salary of around \$50 per hour. The IQR describing the spread of the 50% of the distribution is \$33 per hour, demonstrating that the variability of the hourly maximum is relatively high. The histogram shows the middle 90% of the data to filter out the significant outliers so there are no apparent outliers shown in the graph. 
 
-**Fig 1.2.** The distribution of the hour listed is left-skewed with jobs in the data set mainly concentrated between 2:00 PM and 7:00 PM. Given the apparent skewness the center is the median hour listed at  around 4:00 PM. The IQR describing the spread of the 50% of the distribution is 4 hours, showing how the variability of the hour listed is relatively high. There are apparent outliers in this graph when the hour listed is around 12:00 am. 
+**Fig 1.2.** The majority of posts were posted in the afternoon, with the next most popular time to post as the evening. 1568 jobs were posted in the afternoon, and 591 were posted in the evening. Only a few jobs were posted in the morning and night; 4 jobs were posted in the morning and 7 were posted at night. 
 
 **Fig 1.3.** The distribution of follower count is right-skewed with jobs in the data set having a generally lower number of followers.Given the apparent skewness the center is the median of followers of around 70 thousand followers. The IQR describing the spread of the 50% of the distribution is over 280,000 followers, which means the variability of follower count in the data set is relatively high.
+
+We saw the potential for an interaction effect between the maximum hourly salary and the required experience level of the candidate for the position, as typically those with less experience are paid less. We also saw the potential for interaction effects between hourly maximum salary and if remote work was allowed; however, the best-fit lines for there being no remote work and remote work parallel, indicating no potential relationship.
 
 ```{r out.width="50%"}
 #| echo: false
 experience_plot <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary, y = per_applies, color = formatted_experience_level)) +
-  geom_point() + 
+  geom_point(size = 0.5) + 
   geom_smooth(method = 'lm',formula = y ~ x, se = F) +
   labs(x = "Hourly Maximum Salary",
        y = "Applications per view",
@@ -234,7 +235,7 @@ cor(linkedin_subset$hourly_max_salary, linkedin_subset$per_applies)
 tapply(linkedin_subset$per_applies, linkedin_subset$formatted_experience_level, summary)
 ```
 
-**Fig 2.** There is no apparent direction or shape between the hourly maximum salary and applications per view for each of the experience levels based on the graphs. The correlation between these two variables is around -0.033, indicating the relationship is moderately weak. The distribution of applications per view based on experience level and maximum salary is mostly concentrated when the applications per view is less than 0.50 and the hourly maximum salary is less than 200 for each experience level. The mid-senior level has apparent outliers when the hourly maximum salary is greater than 200 and the NA level has outliers when the applications per view is above 0.75. There is also not as much data for some of the experience levels, including internship and executive.
+**Fig 2.** As the maximum hourly salary increases, the percentage of applicants out of viewers increases at different rates between different levels of experience required, although there is no apparent direction or shape between the hourly maximum salary and applications per view for each of the experience levels. The correlation between these two variables is around -0.033, indicating the relationship is moderately weak. The distribution of applications per view based on experience level and maximum salary is mostly concentrated when the applications per view is less than 0.50 and the hourly maximum salary is less than 200 for each experience level. The mid-senior level has apparent outliers when the hourly maximum salary is greater than 200. There is also not as much data for some of the experience levels, including internship and executive.
 
 ```{r out.width="50%"}
 #| echo: false
@@ -278,7 +279,7 @@ Since the existing posted time is in different time zones, we converted the time
 We dropped all \`NA\` values for all predictors we wanted to observe so we can keep our dataset consistent when testing different models. Specifically, we dropped NAs for \`hourly_max_salary\`, \`per_applies\`, \`follower_count\`, \`formatted_experience_level\`, \`original_listed_time\`, and \`remote_allowed\`.\
 \
 **Filtering\
-**To remove significant outliers that may affect the model's precision, we filtered and only kept the middle 90% of the data for the "hourly_max_salary" and "follower_count" variables. To generalize our results to job listings with a reasonable number of views, we filtered out job listings with less than 5 views.
+**To remove significant outliers that may affect the model's precision, we filtered and only kept the middle 90% of the data for the \`hourly_max_salary\` and \`follower_count\` variables. To generalize our results to job listings with a reasonable number of views, we filtered out job listings with less than 5 views. Because there were so few listings posted in the morning and night, we dropped the levels \`morning\` and \`night\` in \`time_posted\`. 
 
 **Normalize Response Variable\
 **Because each job has been listed for varying time durations, and its view count is directly related to its application count, we decided to normalize the application count with the view count. To do so, we created a new variable \`per_applies\`, which divides \`applications\` by \`views\`. We now use \`per_applies\` as our response variable.
@@ -286,26 +287,9 @@ We dropped all \`NA\` values for all predictors we wanted to observe so we can k
 **Model Type**\
 Because \`per_applies\` is a numerical variable, a linear regression model would be most appropriate to predict the number of applications per view. As we addressed in the introduction, a person takes into consider many factors when applying to a job, so our model takes into consideration multiple predictors, including the hour of day posted, company follower count, experience level, maximum salary, ability to work remote, and if benefits are listed.
 
-Checking interaction effect:
+We checked for interaction effects between if remote work is allowed and maximum hourly salary, and level of experience and maximum hourly salary. The best-fit lines for maximum hourly salary by various levels of experience had different slopes, indicating a potential interaction effect, while the best-fit lines by remote work were parallel, indicating no interaction effect. 
 
-```{r out.width="50%"}
-#| echo: false
-linkedin_subset |>
-  ggplot(aes(x = hourly_max_salary, y = per_applies, color = formatted_experience_level)) +
-  geom_point(size = 1) +
-  geom_smooth(method = "lm", formula = y~x, se = F) + 
-  labs(
-    x = "Hourly Max Salary (Dollars)",
-    y = "Percent of Viewers that Applied",
-    title = "Effect of Experience Level and Salary on
-    Percent of Viewers that Applied",
-    color = "Experience Level"
-  )
-```
-
-To check for interaction effects, we look at the relationship between two variables when a variable is grouped to see if the percent of viewers that applied differs based on various categorical variables. We saw the potential for an interaction effect between the maximum hourly salary and the required experience level of the candidate for the position, as typically those with less experience are payed less. As seen in the figure below, as the maximum hourly salary increases, the percentage of applicants out of viewers increases at different rates between different levels of experience required. We also saw the potential for interaction effects between hourly maximum salary and if remote work was allowed; however, the best fit lines for there being no remote work and remote work parallel, indicating no potential relationship.
-
-We split the \`linkedin\` dataset into training and testing data, with 75% of the data in training and 25% in testing. We then used cross-fold validation with 12 folds on the training data set to find the mean summary statistics (AIC,  BIC, Adjusted R-Squared) for each model and compared the different values to find the best possible model. This process was repeated for models containing each combination of predictor variables. We set a seed of (2) when splitting and folding the data to ensure reproducibility.
+We split the \`linkedin\` dataset into training and testing data, with 75% of the data in training and 25% in testing. We then used cross-fold validation with 12 folds on the training data set to find the mean summary statistics (AIC,  BIC, Adjusted R-Squared) for each model and compared the different values to find the best possible model. This process was repeated for three models, one full model, one with statistically significant variables, and one with statistically significant variables and including the interaction effect. We set a seed of (2) when splitting and folding the data to ensure reproducibility.
 
 ```{r split_data}
 #| echo: false
@@ -453,6 +437,13 @@ tidy(linkedin_red_fit) |>
 ```
 
 $per\_applies = 0.209 + 0.010(follower\_count(millions)) + 0.033(remote\_allowed)$ $- 0.054(Director) - 0.016(Entry\_level)-0.068(Executive)-0.003(Internship)$ $- 0.009(Mid\_Senior\_level)$
+`Intercept`: When there are --- followers(mean follower amount), the hourly_max_salary is ---, there is no remote work allowed, and the experience level required is associate, **20.9%** of viewers applied to the position. 
+
+`Follower_count`: For every one million increase in followers a company has, the percentage of applicants from viewers increases by **1.0%** on average, holding all else constant.  
+
+`Remote_allowed_yes`: We expect the percentage of applicants from viewers to be higher by **3.3%**, on average, for positions that allow remote work vs positions that do not, holding all else constant. 
+
+`Formatted_experience_level`: When the position requires the Director or Executive experience, the effect of formatted_experience_level is statistically significant, with p-values of almost **0 and 0.016**, respectively. When the position requires director experience, we expect the percentage of applicants from viewers to be lower than that for requiring associate experience, on average, by **5.4%,** holding all else constant. When the position requires executive experience, we expect the percentage of applicants from viewers to be lower than that for requiring associate experience, on average, by **6.8%**, holding all else constant. 
 
 **Linearity:**
 
@@ -509,7 +500,6 @@ norm <- ggplot(data = linkedin_red_aug, aes(x = .resid)) +
        x = "Residuals")
 ```
 
-
 ```{r out.width="50%"}
 #| echo: false
 ind <- ggplot(linkedin_red_aug, aes(y = .resid, x = 1:nrow(linkedin_red_aug))) +
@@ -527,14 +517,13 @@ ind <- ggplot(linkedin_red_aug, aes(y = .resid, x = 1:nrow(linkedin_red_aug))) +
 norm + ind
 ```
 
-
 **Normality:**
 
 Based on "Jobs vs Residuals," the distribution of the residuals is unimodal but not symmetric, so the normality condition is not satisfied. However, the sample size is large enough to relax this condition since it is not satisfied.
 
 **Independence:**
 
-Although there there were some jobs posted from the same company, which may influence independence within jobs, we took a random sample of the jobs to address this issue. Based on "Order of data collection vs residuals," there is clear pattern in the residuals vs. order of data collection plot, so independence condition appears to be satisfied, as far as we can evaluate it. 
+Although there there were some jobs posted from the same company, which may influence independence within jobs, we took a random sample of the jobs to address this issue. Based on "Order of data collection vs residuals," there is clear pattern in the residuals vs. order of data collection plot, so independence condition appears to be satisfied, as far as we can evaluate it.
 
 ```{r}
 #| echo: false
@@ -582,9 +571,9 @@ The low \$R\^2\$ value of 0.0280 suggests there is no significant relationship b
 **Our final model suggests there is no statistically significant relationship between our response variable, the percent of viewers who applied, and the maximum salary, number of followers, having a remote option, the job experience level, the hour at which it was posted, and if the benefits were posted. Our model suggests the percentage of viewers who applied and the maximum salary, number of followers, having a remote option, the job experience level, the hour at which it was posted, and if the benefits were posted are not useful predictors, and therefore do not provide much insight into what makes a LinkedIn post have significant popularity.
 
 **Findings\
-**Although our model is not a good fit, employers and employees can still take away two main findings. First, people\'s decisions about job applications are nuanced and difficult to predict using only measured metrics - factors outside of what our dataset scraped from LinkedIn could contribute to employee application rates, such as company culture and personal interest could also contribute to view count and application rate. 
+**Although our model is not a good fit, employers and employees can still take away two main findings. First, people's decisions about job applications are nuanced and difficult to predict using only measured metrics - factors outside of what our dataset scraped from LinkedIn could contribute to employee application rates, such as company culture and personal interest could also contribute to view count and application rate. 
 
-Second, application rates could be impacted by their belief about likelihood of success - viewers might be less likely to apply to jobs that require more experience to avoid wasting their effort applying to jobs they are unqualified for. This is demonstrated in our model since variables such as \'Director\' and \'Executive\' have coefficients that are more negative, which means lower percentages of viewers apply to them. Consequently, conditions such as higher salary or more benefits, which we hypothesized to lead to higher application rates, have coefficients of approximately 0.000 and -0.007, respectively. This means they do not increase application rates among viewers, potentially because they are associated with jobs requiring more experience.
+Second, application rates could be impacted by their belief about likelihood of success - viewers might be less likely to apply to jobs that require more experience to avoid wasting their effort applying to jobs they are unqualified for. This is demonstrated in our model since variables such as 'Director' and 'Executive' have coefficients that are more negative, which means lower percentages of viewers apply to them. Consequently, conditions such as higher salary or more benefits, which we hypothesized to lead to higher application rates, have coefficients of approximately 0.000 and -0.007, respectively. This means they do not increase application rates among viewers, potentially because they are associated with jobs requiring more experience.
 
 **Limitations\
 **Some of the limitations of our analysis may be our treatment of NA data in creating \`if_benefits\` and \`remote_allowed\`. We assumed that since the data had not been included, it was not available in the post, and therefore the values could be inputted as 0. Another possible limitation is that we chose to normalize the maximum salaries across hourly, monthly, and yearly pay periods to create \`hourly_max_salary", and to do so needed to make assumptions about how often individuals would work. These assumptions could have been incorrect and thus impacted the accuracy of our final model. 
