@@ -284,6 +284,10 @@ We dropped all \`NA\` values for all predictors we wanted to observe so we can k
 **Normalize Response Variable\
 **Because each job has been listed for varying time durations, and its view count is directly related to its application count, we decided to normalize the application count with the view count. To do so, we created a new variable \`per_applies\`, which divides \`applications\` by \`views\`. We now use \`per_applies\` as our response variable.
 
+**Random Sampling**
+
+To address concerns with independence of jobs posted within the same company, we took a random sample with a size of 1500.
+
 **Model Type**\
 Because \`per_applies\` is a numerical variable, a linear regression model would be most appropriate to predict the number of applications per view. As we addressed in the introduction, a person takes into consider many factors when applying to a job, so our model takes into consideration multiple predictors, including the hour of day posted, company follower count, experience level, maximum salary, ability to work remote, and if benefits are listed.
 
@@ -436,8 +440,7 @@ tidy(linkedin_red_fit) |>
   kable(digits = 3)
 ```
 
-$per\_applies = 0.209 + 0.010(follower\_count(millions)) + 0.033(remote\_allowed)$ $- 0.054(Director) - 0.016(Entry\_level)-0.068(Executive)-0.003(Internship)$ $- 0.009(Mid\_Senior\_level)$
-`Intercept`: When there are --- followers(mean follower amount), the hourly_max_salary is ---, there is no remote work allowed, and the experience level required is associate, **20.9%** of viewers applied to the position. 
+$per\_applies = 0.209 + 0.010(follower\_count(millions)) + 0.033(remote\_allowed)$ $- 0.054(Director) - 0.016(Entry\_level)-0.068(Executive)-0.003(Internship)$ $- 0.009(Mid\_Senior\_level)$ `Intercept`: When there are --- followers(mean follower amount), the hourly_max_salary is ---, there is no remote work allowed, and the experience level required is associate, **20.9%** of viewers applied to the position. 
 
 `Follower_count`: For every one million increase in followers a company has, the percentage of applicants from viewers increases by **1.0%** on average, holding all else constant.  
 
