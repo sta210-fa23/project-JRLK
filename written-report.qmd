@@ -138,6 +138,7 @@ linkedin_subset <- linkedin_subset |>
 
 ```{r}
 #| echo: false
+set.seed(2)
 random_rows<- sample(1:nrow(linkedin_subset), 1500)
 linkedin_subset <- linkedin_subset[random_rows,]
 ```
