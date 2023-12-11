@@ -134,11 +134,16 @@ linkedin_subset <- linkedin_subset |>
             hour_listed))
 ```
 
+```{r}
+random_rows<- sample(1:nrow(linkedin_subset), 1500)
+linkedin_subset <- linkedin_subset[random_rows,]
+```
+
 ## Introduction and data
 
 LinkedIn is a popular platform that connects companies and professionals spanning various levels of experience, and there are thousands of active job postings available on LinkedIn. Moreover, online job search services and platforms are now considered equally important for people to access a wide variety of opportunities compared to in-person job postings. With the sheer amount of postings, applicants may be overwhelmed by the vast amount of postings, and are less likely to come across some postings over others. Our primary research question is - what variables about job postings increase popularity among applicants?
 
-This data set was created by Arsh Koneru-Ansari in July 2023, who used Python to scrape data directly from linkedin.com. The scraper code is published in their [GitHub](https://github.com/ArshKA/LinkedIn-Job-Scraper#jobs).
+This data set was created by Arsh Koneru-Ansari in August 2023, who used Python to scrape data directly from linkedin.com. The data contains jobs posted between August 10 and August 24, 2023. The scraper code is published in their [GitHub](https://github.com/ArshKA/LinkedIn-Job-Scraper#jobs).
 
 The data dictionary for the variable definitions can be found in the ReadMe for the data. The variables we will focus on are:
 
@@ -187,14 +192,10 @@ hr_hist <- linkedin_subset |>
 sal_quantile<-quantile(linkedin_subset$hourly_max_salary, probs = c(0.05, 0.5, 0.95), na.rm =TRUE)
 follower_quantile<-quantile(linkedin_subset$follower_count, probs = c(0.05, 0.5, 0.95),na.rm =TRUE) 
 views_quantile<-quantile(linkedin_subset$views, probs = c(0.1,0.5, 0.95), na.rm = TRUE)
-```
-
-```{r}
-#| echo: false
 linkedin_subset_small <- linkedin_subset[, c(3,8,10)]
 summary_stats <- summary(linkedin_subset_small)
-
 ```
+
 
 *Fig 1.1.* The distribution of hourly maximum salary is right-skewed with jobs in the data set having a generally lower hourly maximum salary. Given the apparent skewness the center is the median hourly maximum salary of around \$50 per hour. The IQR describing the spread of the 50% of the distribution is \$33 per hour, demonstrating that the variability of the hourly maximum is relatively high. The histogram shows the middle 90% of the data to filter out the significant outliers so there are no apparent outliers shown in the graph. 
 
@@ -249,20 +250,6 @@ salary_scat <- linkedin_subset |>
 (follow_scat + salary_scat) 
 ```
 
-```{r}
-#| echo: false
-#group <- linkedin_subset |>
-#  group_by(hour_listed) |>
-#  summarise(mean_per_applies = mean(per_applies))
-```
-
-```{r}
-#| echo: false
-#group |>
-#  ggplot(aes(x = hour_listed, y = mean_per_applies)) +
-#  geom_col(fill = "lightblue3") +
-#  labs(x = "Hour Listed (hours since 12 am)", y = "Applications per View (%)", title = "Applications per #View based on Hour of Day Listed")
-```
 
 *Fig 3.1.* There is a slight linear correlation between follower count of a company and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than 1,000,000 followers, so it would be beneficial to remove outliers that have more followers than that.
 
@@ -271,7 +258,7 @@ salary_scat <- linkedin_subset |>
 ## Methodology
 
 **Intro\
-**The data provides information about job listing details such as views, applications, time posted, etc., as well as whether or not certain benefits were offered in the job listing. This information was scraped from LinkedIn on July 23 and 24, 2023.
+**The data provides information about job listing details such as views, applications, time posted, etc., as well as whether or not certain benefits were offered in the job listing on jobs from August 10-24, 2023. This information was scraped from LinkedIn between August 23 and 24, 2023.
 
 **Joining Datasets**\
 While most of our data is from the \`job_postings\` data set, we also wanted to include employee and follower count from the \`employee\` data set, and the type and number of benefits listed from the \`benefits\` data set. We joined all data sets together by \`company_id\`, and saved the data set as \`linkedin\`.
