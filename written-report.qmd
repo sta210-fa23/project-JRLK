@@ -200,9 +200,9 @@ linkedin_subset_small <- linkedin_subset[, c(3,8,10)]
 summary_stats <- summary(linkedin_subset_small)
 ```
 
-**Fig 1.1.** The distribution of hourly maximum salary is right-skewed with jobs in the data set having a generally lower hourly maximum salary. Given the apparent skewness the center is the median hourly maximum salary of around \$50 per hour. The IQR describing the spread of the 50% of the distribution is \$33 per hour, demonstrating that the variability of the hourly maximum is relatively high. The histogram shows the middle 90% of the data to filter out the significant outliers so there are no apparent outliers shown in the graph. 
+**Fig 1.1.** The distribution of hourly maximum salary is right-skewed with jobs in the data set having a generally lower hourly maximum salary. Given the apparent skewness the center is the median hourly maximum salary of \$50.80 per hour. The IQR describing the spread of the 50% of the distribution is \$33.94 per hour, demonstrating that the variability of the hourly maximum is relatively high. The histogram shows the middle 90% of the data to filter out the significant outliers. 
 
-**Fig 1.2.** The majority of posts were posted in the afternoon, with the next most popular time to post as the evening. 1568 jobs were posted in the afternoon, and 591 were posted in the evening. Only a few jobs were posted in the morning and night; 4 jobs were posted in the morning and 7 were posted at night. 
+**Fig 1.2.** The majority of posts were posted in the afternoon, with the next most popular time to post as the evening. 1085 jobs were posted in the afternoon, and 415 were posted in the evening. In the original data set, only a few jobs were posted in the morning and night: 4 jobs were posted in the morning and 7 were posted at night.
 
 **Fig 1.3.** The distribution of follower count is right-skewed with jobs in the data set having a generally lower number of followers.Given the apparent skewness the center is the median of followers of around 70 thousand followers. The IQR describing the spread of the 50% of the distribution is over 280,000 followers, which means the variability of follower count in the data set is relatively high.
 
@@ -211,7 +211,9 @@ We saw the potential for an interaction effect between the maximum hourly salary
 ```{r out.width="50%"}
 #| echo: false
 experience_plot <- linkedin_subset |>
-  ggplot(aes(x = hourly_max_salary, y = per_applies, color = formatted_experience_level)) +
+  ggplot(aes(x = hourly_max_salary, 
+             y = per_applies,
+             color = formatted_experience_level)) +
   geom_point(size = 0.5) + 
   geom_smooth(method = 'lm',formula = y ~ x, se = F) +
   labs(x = "Hourly Maximum Salary",
@@ -220,8 +222,19 @@ experience_plot <- linkedin_subset |>
        title = "Applications per view vs. maximum salary \nbased on experience level") + 
   facet_wrap(~formatted_experience_level) +
   guides(color = FALSE) 
+remote_plot <- linkedin_subset |>
+  ggplot(aes(x = hourly_max_salary, 
+             y = per_applies,
+             color = remote_allowed)) +
+  geom_point(size = 0.5) + 
+  geom_smooth(method = 'lm',formula = y ~ x, se = F) +
+  labs(x = "Hourly Maximum Salary",
+       y = "Applications per view",
+       color = "Remote Allowed?",
+       title = "Applications per view vs. maximum salary \nbased on remote work") + 
+  facet_wrap(~remote_allowed) +
+  guides(color = FALSE)
 experience_plot 
-
 ```
 
 ```{r}
@@ -236,28 +249,33 @@ cor(linkedin_subset$hourly_max_salary, linkedin_subset$per_applies)
 tapply(linkedin_subset$per_applies, linkedin_subset$formatted_experience_level, summary)
 ```
 
-**Fig 2.** As the maximum hourly salary increases, the percentage of applicants out of viewers increases at different rates between different levels of experience required, although there is no apparent direction or shape between the hourly maximum salary and applications per view for each of the experience levels. The correlation between these two variables is around -0.033, indicating the relationship is moderately weak. The distribution of applications per view based on experience level and maximum salary is mostly concentrated when the applications per view is less than 0.50 and the hourly maximum salary is less than 200 for each experience level. The mid-senior level has apparent outliers when the hourly maximum salary is greater than 200. There is also not as much data for some of the experience levels, including internship and executive.
+**Fig 2.** As the maximum hourly salary increases, the percentage of applicants out of viewers increases at different rates between different levels of experience required, although there is no apparent direction or shape between the hourly maximum salary and applications per view for each of the experience levels. The correlation between these two variables is around -0.0298, indicating the relationship is moderately weak. The distribution of applications per view based on experience level and maximum salary is mostly concentrated when the applications per view is less than 50% and the hourly maximum salary is about \$60 for each experience level. The mid-senior level has apparent outliers when the hourly maximum salary is greater than 200. There is also not as much data for some of the experience levels, including internship and executive.
 
 ```{r out.width="50%"}
 #| echo: false
 
 follow_scat <- linkedin_subset |>
-  filter(follower_count > 10000) |>
-  ggplot(aes(x = follower_count, y = per_applies)) +
+  ggplot(aes(x = follower_count/1000000, y = per_applies)) +
   geom_point(size = 0.3, color = "lightblue4") +
-  labs(x = "Follower Count", y = "Applications per \nView (%)", title = "Applications per View\nvs. Follower Count")
+  labs(x = "Follower Count (millions)", 
+       y = "Applications per \nView (%)", 
+       title = "Applications per View\nvs. Follower Count") + 
+  geom_smooth(method = 'lm',formula = y ~ x, se = F)
 
 salary_scat <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary, y = per_applies)) +
   geom_point(size = 0.3, color = "lightskyblue3") +
-  labs(x = "Hourly Max Salary", y = "Applications per \nView (%)", title = "Applications per View\nvs. Max Hourly Salary")
+  labs(x = "Hourly Max Salary ($)", 
+       y = "Applications per \nView (%)", 
+       title = "Applications per View\nvs. Max Hourly Salary") + 
+  geom_smooth(method = 'lm',formula = y ~ x, se = F)
 
 (follow_scat + salary_scat) 
 ```
 
-**Fig 3.1.** There is a slight linear correlation between follower count of a company and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than 1,000,000 followers, so it would be beneficial to remove outliers that have more followers than that.
+**Fig 3.1.** There is a possible linear correlation between follower count of a company and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than 1,000,000 followers, although there are a significant number of observations above 1,000,000. The observations were filtered so that only the middle 90% of follower counts were observed, avoiding major outliers with too few or too many observations.
 
-**Fig 3.2.** There is a slight positive linear correlation between a job's adjusted hourly maximum salary and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than \$200,000 for adjusted hourly max salary, so it would be beneficial to filter out outliers that are above this threshold. Additionally, it would be beneficial to remove the outlier where 100% of viewers applied to the job (per_applies = 1.0)
+**Fig 3.2.** There is a slight positive linear correlation between a job's adjusted hourly maximum salary and percentage of viewers who apply to the job. Most of the observations are concentrated to have less than \$200,000 for adjusted hourly max salary, so it would be beneficial to filter out outliers that are above this threshold. Additionally, it would be beneficial to remove the outliers where 100% of viewers applied to the job (per_applies = 1.0)
 
 ## Methodology
 
@@ -315,7 +333,14 @@ linkedin_spec <- linear_reg() |>
 ```{r recipe_1}
 #| echo: false
 set.seed(2)
-linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_count + remote_allowed + formatted_experience_level + if_benefits + time_posted, data = linkedin_train) |>
+linkedin_recipe1 <- recipe(per_applies ~ job_id + 
+                          hourly_max_salary + 
+                          follower_count + 
+                          remote_allowed + 
+                          formatted_experience_level + 
+                          if_benefits + 
+                          time_posted,
+                          data = linkedin_train) |>
   update_role(job_id, new_role = "ID") |> 
   step_mutate(follower_count = follower_count/1000000) |>
   step_center(hourly_max_salary, follower_count) |>
@@ -326,9 +351,12 @@ linkedin_recipe1 <- recipe(per_applies ~ job_id + hourly_max_salary + follower_c
 ```{r recipe_2}
 #| echo: false
 set.seed(2)
-linkedin_recipe2 <- recipe(per_applies ~ job_id + remote_allowed + 
-                             formatted_experience_level + follower_count,
-                           data = linkedin_train) |>
+linkedin_recipe2 <- recipe(per_applies ~ job_id + 
+                          follower_count +
+                          remote_allowed + 
+                          formatted_experience_level +
+                          if_benefits, 
+                          data = linkedin_train) |>
   update_role(job_id, new_role = "ID") |> 
   step_mutate(follower_count = follower_count/1000000) |>
   step_center(follower_count) |>
@@ -336,13 +364,15 @@ linkedin_recipe2 <- recipe(per_applies ~ job_id + remote_allowed +
   step_zv(all_predictors())
 ```
 
-```{r}
+```{r recipe_3}
 #| echo: false
 set.seed(2)
-linkedin_recipe3 <- recipe(per_applies ~ job_id + formatted_experience_level + 
-                             follower_count +
-                            remote_allowed + hourly_max_salary, 
-                           data = linkedin_train) |>
+linkedin_recipe3 <- recipe(per_applies ~ job_id + 
+                          formatted_experience_level + 
+                          follower_count +
+                          remote_allowed + 
+                          hourly_max_salary, 
+                          data = linkedin_train) |>
   step_string2factor(formatted_experience_level) |>
   step_interact(terms = ~ hourly_max_salary:formatted_experience_level) |>
   update_role(job_id, new_role = "ID") |> 
@@ -368,7 +398,7 @@ linkedin_wflow3 <- workflow() |>
   add_model(linkedin_spec)
 ```
 
-```{r}
+```{r calcs}
 #| echo: false
 set.seed(2)
 calc_model_stats <- function(x) {
@@ -386,32 +416,12 @@ linkedin_fit_rs_full <- linkedin_wflow1 |>
 linkedin_fit_rs_red <- linkedin_wflow2 |>
   fit_resamples(resamples = folds, 
                 control = control_resamples(extract = calc_model_stats))
-
 linkedin_fit_rs_red_inter <- linkedin_wflow3 |>
   fit_resamples(resamples = folds, 
                 control = control_resamples(extract = calc_model_stats))
 ```
 
-```{r resample_mean_stats}
-#| echo: false
-map_df(linkedin_fit_rs_full$.extracts, ~ .x[[1]][[1]]) |>
-  summarise(mean_adj_rsq = mean(adj.r.squared), 
-            mean_aic = mean(AIC), 
-            mean_bic = mean(BIC)) |> 
-  kable(digits = 3)
-map_df(linkedin_fit_rs_red$.extracts, ~ .x[[1]][[1]]) |>
-  summarise(mean_adj_rsq = mean(adj.r.squared), 
-            mean_aic = mean(AIC), 
-            mean_bic = mean(BIC)) |> 
-  kable(digits = 3)
-map_df(linkedin_fit_rs_red_inter$.extracts, ~ .x[[1]][[1]]) |>
-  summarise(mean_adj_rsq = mean(adj.r.squared), 
-            mean_aic = mean(AIC), 
-            mean_bic = mean(BIC)) |> 
-  kable(digits = 3)
-```
-
-```{r out.width = "50%"}
+```{r full_fit_display}
 #| echo: false
 linkedin_fit_full <- linkedin_wflow1 |>
   fit(data = linkedin_train)
@@ -420,13 +430,38 @@ tidy(linkedin_fit_full) |>
   kable(digits = 3)
 ```
 
-The adjusted $R^2$ value for a model including all predictors (`hourly_max_salary`, `follower_count`, `remote_allowed`, `formatted_experience_level`, `hour_listed`, and `if_benefits`) is 0.0233, and the AIC and BIC was -2095.867 and -2021.562, respectively.
+```{r resample_mean_stats_full}
+#| echo: false
+map_df(linkedin_fit_rs_full$.extracts, ~ .x[[1]][[1]]) |>
+  summarise(mean_adj_rsq = mean(adj.r.squared), 
+            mean_aic = mean(AIC), 
+            mean_bic = mean(BIC)) |> 
+  kable(digits = 3)
+```
 
-Using a significance level of $\alpha = 0.10$, `follower_count`, `remote_allowed`, if the job requires director level of experience, and if the job requires executive level of experience are the only statistically significant variables, with p-values of 0.025, about 0, 0.001, and 0.035 respectively.
+**Full Model:** The mean adjusted $R^2$ value for a model including all predictors is 0.018, and the AIC and BIC was -1436.347 and -1377.085, respectively. Using a significance level of $\alpha = 0.10$, `follower_count`, `remote_allowed`, `if_benefits`, if the job requires director level of experience, and if the job requires executive level of experience are the only statistically significant variables and levels, with p-values of 0.002, 0.002, 0.074, 0.074, and 0.098 respectively. We then created a reduced model using only these statistically significant predictors.
 
-Then, we made a reduced model with these statistically significant variables including `follower_count`, `remote_allowed`, and `formatted_experience_level` to compare models. The adjusted R\^2, AIC, and BIC were 0.0237, -2101.431, and -2053.664, respectively. Since this reduced model with less predictors has a higher adjusted $R^2$ and lower AIC and BIC, which all indicate a stronger or better model, we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level`as predictors works the better than the full model.
+```{r resample_mean_stats_red}
+#| echo: false
+map_df(linkedin_fit_rs_red$.extracts, ~ .x[[1]][[1]]) |>
+  summarise(mean_adj_rsq = mean(adj.r.squared), 
+            mean_aic = mean(AIC), 
+            mean_bic = mean(BIC)) |> 
+  kable(digits = 3)
+```
 
-Lastly, we included a model with the variables from the reduced model, plus `hourly_max_salary` to explore the potential interaction effect between `hourly_max_salary` and `remote_allowed`, which we identified earlier has a potential interaction term. The adjusted $R^2$, AIC, and BIC are 0.0238, -2099.576, and -2041.193. Although the adjusted $R^2$ is higher for the reduced model with the interaction effect, the AIC and BIC were higher than those of the reduced model without the interaction effect, indicating that the reduced model without the interaction term is a stronger model. Since the adjusted $R^2$ for both models aren't significantly different, we decided that the reduced model without the interaction term would work better because of the lower AIC and BIC.
+**Reduced Model:** The reduced model had adjusted $R^2$, AIC, and BIC of 0.019, -1439.242, and -1389.857, respectively. Since this reduced model with less predictors had a higher adjusted $R^2$ and lower AIC and BIC, we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level` as predictors is a better model for predicting the percentage of applicants than the full model.
+
+```{r resample_mean_stats_red_inter}
+#| echo: false
+map_df(linkedin_fit_rs_red_inter$.extracts, ~ .x[[1]][[1]]) |>
+  summarise(mean_adj_rsq = mean(adj.r.squared), 
+            mean_aic = mean(AIC), 
+            mean_bic = mean(BIC)) |> 
+  kable(digits = 3)
+```
+
+**Interaction Effects Model:** Lastly, we included a model with the variables from the reduced model, plus `hourly_max_salary` to explore the potential interaction effect between `hourly_max_salary` and `formatted_experience_level`, which we identified earlier has a potential interaction term. The adjusted $R^2$, AIC, and BIC are 0.014, -1428.808, and -1354.73. The adjusted $R^2$ is lower, and the AIC and BIC are higher for the reduced model with the interaction effect vs those of the reduced model without the interaction effect, indicating that the reduced model without the interaction term is a stronger model.
 
 Overall, by comparing the adjusted $R^2$, AIC, and BIC values of each of the models (with all predictors, statistically significant predictors, and statistically significant predictors with an interaction effect), we concluded that the reduced model with `follower_count`, `remote_allowed`, and `formatted_experience_level` as predictors works as the best model.
 
@@ -441,15 +476,19 @@ tidy(linkedin_red_fit) |>
   kable(digits = 3)
 ```
 
-$per\_applies = 0.209 + 0.010(follower\_count(millions)) + 0.033(remote\_allowed)$ $- 0.054(Director) - 0.016(Entry\_level)-0.068(Executive)-0.003(Internship)$ $- 0.009(Mid\_Senior\_level)$ `Intercept`: When there are --- followers(mean follower amount), the hourly_max_salary is ---, there is no remote work allowed, and the experience level required is associate, **20.9%** of viewers applied to the position. 
+$per\_applies = 0.211 + 0.019(follower\_count(millions)) + 0.027(remote\_allowed\_yes)-0.040(Director) -0.004(Entry\_Level)-0.067(Executive)-0.014(Internship)-0.008(Mid\_Senior)-0.013(if_benefits_listed)$
 
-`Follower_count`: For every one million increase in followers a company has, the percentage of applicants from viewers increases by **1.0%** on average, holding all else constant.  
+Intercept: When a company has 33,8808 followers, the hourly maximum salary is \$54.64, there is no remote work allowed, and the experience level required is associate, 21.1% of viewers applied to the position.
 
-`Remote_allowed_yes`: We expect the percentage of applicants from viewers to be higher by **3.3%**, on average, for positions that allow remote work vs positions that do not, holding all else constant. 
+`Follower_count`: For every one million increase in followers a company has, the percentage of applicants from viewers increases by 1.9% on average, holding all else constant.  
 
-`Formatted_experience_level`: When the position requires the Director or Executive experience, the effect of formatted_experience_level is statistically significant, with p-values of almost **0 and 0.016**, respectively. When the position requires director experience, we expect the percentage of applicants from viewers to be lower than that for requiring associate experience, on average, by **5.4%,** holding all else constant. When the position requires executive experience, we expect the percentage of applicants from viewers to be lower than that for requiring associate experience, on average, by **6.8%**, holding all else constant. 
+`Remote_allowed_yes`: We expect the percentage of applicants from viewers to be higher by 2.7%, on average, for positions that allow remote work vs positions that do not, holding all else constant. 
 
-**Linearity:**
+`Formatted_experience_level`: When the position requires the Director or Executive experience, the effect of formatted_experience_level is statistically significant ($\alpha = 0.10$), with p-values of 0.026 and 0.071, respectively. When the position requires director experience, we expect the percentage of applicants from viewers to be lower than that for requiring associate experience, on average, by 4.0%, holding all else constant. When the position requires executive experience, we expect the percentage of applicants from viewers to be lower than that for requiring associate experience, on average, by 6.7%, holding all else constant. 
+
+`if_benefits`: When the job lists benefits, we expect the percentage of applicants from viewers to be lower than that if benefits are not listed by 1.3% on average, holding all else constant.
+
+**Linearity:** Since the plot of the residuals vs. predicted values do not have a discernible pattern and the plots of the residuals vs. each predictor do not have a discernible pattern, linearity is met.
 
 ```{r out.width="50%"}
 #| echo: false
@@ -490,11 +529,7 @@ r4 <- ggplot(data = linkedin_red_aug, aes(x = formatted_experience_level, y = .r
 r1+r2+r3+r4
 ```
 
-Since the plot of the residuals vs. predicted values do not have a discernible pattern and the plots of the residuals vs. each predictor do not have a discernible pattern, linearity is met.
-
-**Constant Variance:**
-
-The vertical spread of the residuals is not constant in the plot of the residuals vs. predicted so the constant variance condition is not satisfied.
+**Constant Variance:** The vertical spread of the residuals is not constant in the plot of the residuals vs. predicted so the constant variance condition is not satisfied.
 
 ```{r}
 #| echo: false
@@ -521,13 +556,9 @@ ind <- ggplot(linkedin_red_aug, aes(y = .resid, x = 1:nrow(linkedin_red_aug))) +
 norm + ind
 ```
 
-**Normality:**
+**Normality:** Based on "Jobs vs Residuals," the distribution of the residuals is unimodal but not symmetric, so the normality condition is not satisfied. However, the sample size is large enough to relax this condition since it is not satisfied.
 
-Based on "Jobs vs Residuals," the distribution of the residuals is unimodal but not symmetric, so the normality condition is not satisfied. However, the sample size is large enough to relax this condition since it is not satisfied.
-
-**Independence:**
-
-Although there there were some jobs posted from the same company, which may influence independence within jobs, we took a random sample of the jobs to address this issue. Based on "Order of data collection vs residuals," there is clear pattern in the residuals vs. order of data collection plot, so independence condition appears to be satisfied, as far as we can evaluate it.
+**Independence:** Although there there were some jobs posted from the same company, which may influence independence within jobs, we took a random sample of the jobs to address this issue. Based on "Order of data collection vs residuals," there is clear pattern in the residuals vs. order of data collection plot, so independence condition appears to be satisfied, as far as we can evaluate it.
 
 ```{r}
 #| echo: false
@@ -556,7 +587,7 @@ bind_rows(rmse_train, rmse_test) |>
   kable(digits = 4)
 ```
 
-The RMSE of the training data is 0.1189, and the RMSE of the testing data is 0.1193. Significantly lower RMSEs for training data compared to the testing data could be a sign of model overfit, which means that the model fits the training data too well where it doesn't model new unseen data well. However, since the RMSE values for the training and testing data are very close, this shows no evidence of model overfit.
+The RMSE of the training data is 0.1193, and the RMSE of the testing data is 0.1121. Significantly lower RMSEs for training data compared to the testing data could be a sign of model overfit, which means that the model fits the training data too well where it doesn't model new unseen data well. However, since the RMSE values for the training and testing data are very close, this shows no evidence of model overfit.
 
 ```{r}
 #| echo: false
@@ -567,7 +598,7 @@ stats |>
  kable(digits = 3)
 ```
 
-The low \$R\^2\$ value of 0.0280 suggests there is no significant relationship between the follower count, whether the job allows remote work, and the listed job experience level and the ratio of applications to views. Only 2.8% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables: the follower count, whether the job allows remote, and the listed job experience level.
+The low $R^2$ value of 0.023 suggests there is no significant relationship between the follower count, whether the job allows remote work, and the listed job experience level and the ratio of applications to views. Only 2.3% of the variation in the percent of viewers that applied is a result of the variation in the predictor variables: the follower count, whether the job allows remote, and the listed job experience level.
 
 ## Discussion + Conclusion
 
