@@ -1,15 +1,9 @@
 # Data
 
-If using an external dataset (that doesn't come in an R package), place data file(s) in this folder.
-
-Then, include metadata about your dataset including information on provenance, codebook, etc.
-
-The codebook for your data file(s) using the following format.
-
 ## job_postings.csv
 
 | Variable                   | Description                                                                                       |
-|:---------------------------|:--------------------------------------------------------------------------------------------------|
+|:-----------------|:-----------------------------------------------------|
 | job_id                     | unique job ID as defined by LinkedIn identifying the particular offering (ID)                     |
 | company_id                 | unique company ID as defined by LinkedIn identifying the particular company offering the job (ID) |
 | title                      | job title as found in the LinkedIn post (ID)                                                      |
@@ -41,14 +35,14 @@ The codebook for your data file(s) using the following format.
 ## benefits.csv
 
 | Variable | Description                                                                   |
-|:---------|:------------------------------------------------------------------------------|
+|:-------------|:---------------------------------------------------------|
 | job_id   | unique job ID as defined by LinkedIn identifying the particular offering (ID) |
 | type     | type of benefit provided (401K, Medical Insurance, etc) (categorical)         |
 
 ## employee_counts.csv
 
 | Variable       | Description                                                                                       |
-|:---------------|:--------------------------------------------------------------------------------------------------|
+|:--------------|:--------------------------------------------------------|
 | company_id     | unique company ID as defined by LinkedIn identifying the particular company offering the job (ID) |
 | employee_count | number of employees at company (numerical)                                                        |
 | follower_count | number of company followers on LinkedIn (numerical))                                              |
