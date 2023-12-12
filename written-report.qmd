@@ -157,7 +157,7 @@ The data dictionary for the variable definitions can be found in the ReadMe for 
 
 -   **`max_salary`:** maximum salary offered in the position 
 
--   **`remote_allowed`:** whether job permits remote work (1 = yes)
+-   **`remote_allowed`:** whether the job permits remote work (1 = yes)
 
 -   **`follower_count`:** number of company followers on LinkedIn
 
@@ -167,7 +167,7 @@ The data dictionary for the variable definitions can be found in the ReadMe for 
 
 -   **`type`**: type of benefit provided (Medical insurance, Dental insurance, 401(k), Paid maternity leave, Disability insurance, Vision insurance, Tuition assistance, Pension plan, Child care support, Commuter benefits, Student loan assistance)
 
-```{r numerical_plots, out.width="50%"}
+```{r numerical_plots, out.width="70%", fig.align='center'}
 #| echo: false
 salary_hist <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary)) + 
@@ -208,7 +208,7 @@ summary_stats <- summary(linkedin_subset_small)
 
 We saw the potential for an interaction effect between the maximum hourly salary and the required experience level of the candidate for the position, as typically those with less experience are paid less. We also saw the potential for interaction effects between hourly maximum salary and if remote work was allowed; however, the best-fit lines for there being no remote work and remote work parallel, indicating no potential relationship.
 
-```{r out.width="50%"}
+```{r out.width="60%", fig.align='center'}
 #| echo: false
 experience_plot <- linkedin_subset |>
   ggplot(aes(x = hourly_max_salary, 
@@ -251,7 +251,7 @@ tapply(linkedin_subset$per_applies, linkedin_subset$formatted_experience_level, 
 
 **Fig 2.** As the maximum hourly salary increases, the percentage of applicants out of viewers increases at different rates between different levels of experience required, although there is no apparent direction or shape between the hourly maximum salary and applications per view for each of the experience levels. The correlation between these two variables is around -0.0298, indicating the relationship is moderately weak. The distribution of applications per view based on experience level and maximum salary is mostly concentrated when the applications per view is less than 50% and the hourly maximum salary is about \$60 for each experience level. The mid-senior level has apparent outliers when the hourly maximum salary is greater than 200. There is also not as much data for some of the experience levels, including internship and executive.
 
-```{r out.width="50%"}
+```{r out.width="50%", fig.align='center'}
 #| echo: false
 
 follow_scat <- linkedin_subset |>
@@ -478,7 +478,7 @@ tidy(linkedin_red_fit) |>
 
 $per\_applies = 0.211 + 0.019(follower\_count(millions)) + 0.027(remote\_allowed\_yes)-0.040(Director) -0.004(Entry\_Level)-0.067(Executive)-0.014(Internship)-0.008(Mid\_Senior)-0.013(if_benefits_listed)$
 
-Intercept: When a company has 33,8808 followers, the hourly maximum salary is \$54.64, there is no remote work allowed, and the experience level required is associate, 21.1% of viewers applied to the position.
+`Intercept`: When a company has 33,8808 followers, the hourly maximum salary is \$54.64, there is no remote work allowed, and the experience level required is associate, 21.1% of viewers applied to the position.
 
 `Follower_count`: For every one million increase in followers a company has, the percentage of applicants from viewers increases by 1.9% on average, holding all else constant.  
 
@@ -498,7 +498,7 @@ linkedin_fit_red <- linear_reg() |>
                              formatted_experience_level + follower_count, data = linkedin_train)
 ```
 
-```{r out.width="50%"}
+```{r out.width="50%", fig.align='center'}
 #| echo: false
 linkedin_red_aug <- augment(linkedin_fit_red$fit)
 r1 <- ggplot(data = linkedin_red_aug, aes(x = .fitted, y = .resid)) +
@@ -551,7 +551,7 @@ ind <- ggplot(linkedin_red_aug, aes(y = .resid, x = 1:nrow(linkedin_red_aug))) +
        vs residuals")
 ```
 
-```{r out.width="50%"}
+```{r out.width="47%", fig.align='center'}
 #| echo: false
 norm + ind
 ```
