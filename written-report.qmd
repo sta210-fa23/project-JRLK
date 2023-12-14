@@ -537,7 +537,7 @@ r4 <- ggplot(data = linkedin_red_aug, aes(x = formatted_experience_level, y = .r
 r1+r2+r3+r4
 ```
 
-**Constant Variance:** The vertical spread of the residuals is not constant in the plot of the residuals vs. predicted so the constant variance condition is not satisfied.
+**Constant Variance:** There is no systematic fanning pattern found in the plots looking at the residuals, so the constant variance condition is satisfied.
 
 ```{r}
 #| echo: false
